@@ -28,7 +28,8 @@ export function projectEvidenceGraph(
   >();
 
   for (const entity of entities) {
-    if (!graph.hasNode(entity.id)) graph.addNode(entity.id, { entityId: entity.id });
+    if (!graph.hasNode(entity.id))
+      graph.addNode(entity.id, { entityId: entity.id });
   }
 
   for (const edge of evidence) {

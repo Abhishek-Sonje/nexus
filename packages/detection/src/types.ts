@@ -1,9 +1,7 @@
 import type { EvidenceType } from '@nexus/core';
 import type { EntityCategory } from '@nexus/core';
 
-export type DetectionAttributeType =
-  | 'device_fingerprint'
-  | 'payout_account';
+export type DetectionAttributeType = 'device_fingerprint' | 'payout_account';
 
 export interface DetectionEntity {
   id: string;

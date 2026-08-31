@@ -10,7 +10,7 @@ services:
     volumes:
       - nexus-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus"]
+      test: ['CMD-SHELL', 'pg_isready -U nexus -d nexus']
       interval: 5s
       timeout: 5s
       retries: 12
@@ -24,7 +24,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: "no"
+    restart: 'no'
 
   web:
     build:
@@ -38,7 +38,7 @@ services:
       NEXUS_CODE_VERSION: ${NEXUS_CODE_VERSION:-container}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       migrate:
         condition: service_completed_successfully

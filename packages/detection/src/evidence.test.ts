@@ -26,9 +26,7 @@ const profile: DetectorProfile = {
   bands: { review: 50, elevated: 65, critical: 80 },
 };
 
-function input(
-  transactions: DetectionTransaction[] = [],
-): DetectionInput {
+function input(transactions: DetectionTransaction[] = []): DetectionInput {
   return {
     entities: ['a', 'b', 'c', 'd', 'x'].map((id) => ({ id })),
     attributes: [],

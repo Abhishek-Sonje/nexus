@@ -98,7 +98,9 @@ function flowEvidence(
   profile: DetectorProfile,
 ): EvidenceEdge[] {
   const active = transactions
-    .filter((transaction) => ACTIVE_TRANSACTION_STATUSES.has(transaction.status))
+    .filter((transaction) =>
+      ACTIVE_TRANSACTION_STATUSES.has(transaction.status),
+    )
     .slice()
     .sort(compareTransactions);
   const lotsByEntity = new Map<string, InboundLot[]>();
@@ -208,7 +210,6 @@ export function deriveEvidence(
 
   return {
     edges,
-    ignoredAttributesAboveDegreeCap:
-      attributes.ignoredAttributesAboveDegreeCap,
+    ignoredAttributesAboveDegreeCap: attributes.ignoredAttributesAboveDegreeCap,
   };
 }

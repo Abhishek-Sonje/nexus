@@ -7,7 +7,9 @@ const databaseUrl = process.env.DATABASE_URL;
 const hashKey = process.env.NEXUS_ATTRIBUTE_HASH_KEY;
 if (!databaseUrl) throw new Error('DATABASE_URL is required.');
 if (!hashKey || hashKey.length < 32)
-  throw new Error('NEXUS_ATTRIBUTE_HASH_KEY must contain at least 32 characters.');
+  throw new Error(
+    'NEXUS_ATTRIBUTE_HASH_KEY must contain at least 32 characters.',
+  );
 
 const policy = await loadPolicy();
 const { db, pool } = createDatabase(databaseUrl);

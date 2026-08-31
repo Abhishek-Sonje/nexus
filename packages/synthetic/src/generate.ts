@@ -236,7 +236,9 @@ export function generateDataset(
   const cleanPayers = isolatedEntities.slice(0, roleBoundary);
   const cleanReceivers = isolatedEntities.slice(roleBoundary);
   if (cleanPayers.length === 0 || cleanReceivers.length === 0) {
-    throw new Error('Generator requires isolated payer and receiver populations.');
+    throw new Error(
+      'Generator requires isolated payer and receiver populations.',
+    );
   }
   const remaining = Math.max(
     0,
