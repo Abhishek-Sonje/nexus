@@ -178,6 +178,7 @@ export function generateDataset(
 
     let exposure = 0n;
     if (kindValue === 'ring') {
+      const amount = BigInt(120_000 + Math.floor(rng() * 880_000));
       for (
         let memberIndex = 0;
         memberIndex < members.length;
@@ -186,7 +187,6 @@ export function generateDataset(
         const source = members[memberIndex];
         const target = members[(memberIndex + 1) % members.length];
         if (!source || !target) continue;
-        const amount = BigInt(120_000 + Math.floor(rng() * 880_000));
         exposure += amount;
         const occurredAt = START_TIME + (ordinal * 3 + memberIndex) * 3_600_000;
         injectedTransactions.push({
@@ -229,14 +229,22 @@ export function generateDataset(
   });
 
   const cleanTransactions: GeneratedTransaction[] = [];
+  const isolatedEntities = entities.filter(
+    (entity) => !labeledMemberIds.has(entity.id),
+  );
+  const roleBoundary = Math.floor(isolatedEntities.length * 0.7);
+  const cleanPayers = isolatedEntities.slice(0, roleBoundary);
+  const cleanReceivers = isolatedEntities.slice(roleBoundary);
+  if (cleanPayers.length === 0 || cleanReceivers.length === 0) {
+    throw new Error('Generator requires isolated payer and receiver populations.');
+  }
   const remaining = Math.max(
     0,
     profile.transactionCount - injectedTransactions.length,
   );
   for (let index = 0; index < remaining; index += 1) {
-    const source = pick(entities, rng);
-    let target = pick(entities, rng);
-    while (target.id === source.id) target = pick(entities, rng);
+    const source = pick(cleanPayers, rng);
+    const target = pick(cleanReceivers, rng);
     const occurredAt = START_TIME + Math.floor(rng() * 30 * DAY_MS);
     cleanTransactions.push({
       id: deterministicUuid(rng),

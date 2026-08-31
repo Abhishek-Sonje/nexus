@@ -1,6 +1,9 @@
 import type { DetectorProfile, RiskFeatureVector } from '@nexus/core';
 
-import { categoryAnomalyForMembers } from './category-baseline';
+import {
+  categoryAnomalyForMembers,
+  categoryAnomalyScores,
+} from './category-baseline';
 import type { CategoryBaselines } from './category-baseline';
 import type {
   DetectionEntity,
@@ -49,6 +52,7 @@ export function extractCommunityFeatures(
   transactions: readonly DetectionTransaction[],
   evidence: readonly EvidenceEdge[],
   categoryBaselines?: CategoryBaselines,
+  categoryAnomalyByEntity?: Record<string, number>,
 ): RiskFeatureVector {
   const members = new Set(community.memberIds);
   const internal = evidence.filter(
@@ -81,12 +85,23 @@ export function extractCommunityFeatures(
     ),
     sharedDeviceDensity: densityFor('shared_device'),
     graphDensity: clamp(uniquePairs.size / possiblePairs),
-    categoryAnomaly: categoryAnomalyForMembers(
-      members,
-      entities,
-      transactions,
-      categoryBaselines,
-    ),
+    categoryAnomaly:
+      categoryAnomalyByEntity === undefined
+        ? categoryAnomalyForMembers(
+            members,
+            entities,
+            transactions,
+            categoryBaselines,
+          )
+        : (() => {
+            const values = [...members].flatMap((entityId) => {
+              const value = categoryAnomalyByEntity[entityId];
+              return value === undefined ? [] : [value];
+            });
+            return values.length === 0
+              ? 0
+              : values.reduce((sum, value) => sum + value, 0) / values.length;
+          })(),
   };
 }
 
@@ -138,6 +153,11 @@ function explanations(features: RiskFeatureVector): string[] {
 export function scoreCommunities(
   input: ScoreCommunitiesInput,
 ): ScoredCommunity[] {
+  const categoryAnomalyByEntity = categoryAnomalyScores(
+    input.entities,
+    input.transactions,
+    input.categoryBaselines,
+  );
   return input.communities
     .map((community) => {
       const features = extractCommunityFeatures(
@@ -146,6 +166,7 @@ export function scoreCommunities(
         input.transactions,
         input.evidence,
         input.categoryBaselines,
+        categoryAnomalyByEntity,
       );
       const score = scoreFeatures(features, input.weights);
       const members = new Set(community.memberIds);

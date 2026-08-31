@@ -11,7 +11,8 @@
     "build": "bun build src/index.ts --outdir dist --target node",
     "typecheck": "bun ../../node_modules/typescript/bin/tsc --noEmit",
     "db:generate": "bun node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "bun ../../node_modules/tsx/dist/cli.mjs src/migrate.ts"
+    "db:migrate": "bun --shell=system run db:migrate:node",
+    "db:migrate:node": "node ../../node_modules/tsx/dist/cli.mjs src/migrate.ts"
   },
   "dependencies": {
     "@nexus/core": "workspace:*",

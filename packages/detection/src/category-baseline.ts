@@ -131,40 +131,58 @@ export function categoryAnomalyForMembers(
   baselines: CategoryBaselines | undefined,
 ): number {
   if (!baselines) return 0;
-  const activity = activityByEntity(transactions);
-  const anomalies = entities
-    .filter(
-      (entity) =>
-        memberIds.has(entity.id) &&
-        entity.onboardedVia === 'aggregator' &&
-        entity.category,
-    )
-    .flatMap((entity) => {
-      const sample = activity.get(entity.id);
-      const baseline = entity.category ? baselines[entity.category] : undefined;
-      if (!sample || !baseline) return [];
-      const amountDeviation = Math.abs(
-        (sample.logAmountMedian - baseline.logAmount.median) /
-          baseline.logAmount.mad,
-      );
-      const frequencyDeviation = Math.abs(
-        (sample.frequency - baseline.frequency.median) / baseline.frequency.mad,
-      );
-      const timeDeviation = histogramDistance(
-        sample.timeHistogram,
-        baseline.timeHistogram,
-      );
-      return [
-        Math.min(
-          1,
-          (Math.min(amountDeviation, 6) / 6 +
-            Math.min(frequencyDeviation, 6) / 6 +
-            timeDeviation) /
-            3,
-        ),
-      ];
-    });
+  const scores = categoryAnomalyScores(entities, transactions, baselines);
+  const anomalies = [...memberIds].flatMap((entityId) => {
+    const value = scores[entityId];
+    return value === undefined ? [] : [value];
+  });
   return anomalies.length === 0
     ? 0
     : anomalies.reduce((sum, value) => sum + value, 0) / anomalies.length;
+}
+
+export function categoryAnomalyScores(
+  entities: readonly DetectionEntity[],
+  transactions: readonly DetectionTransaction[],
+  baselines: CategoryBaselines | undefined,
+): Record<string, number> {
+  if (!baselines) return {};
+  const activity = activityByEntity(transactions);
+  return Object.fromEntries(
+    entities
+      .filter(
+        (entity) => entity.onboardedVia === 'aggregator' && entity.category,
+      )
+      .flatMap((entity) => {
+        const sample = activity.get(entity.id);
+        const baseline = entity.category
+          ? baselines[entity.category]
+          : undefined;
+        if (!sample || !baseline) return [];
+        const amountDeviation = Math.abs(
+          (sample.logAmountMedian - baseline.logAmount.median) /
+            baseline.logAmount.mad,
+        );
+        const frequencyDeviation = Math.abs(
+          (sample.frequency - baseline.frequency.median) /
+            baseline.frequency.mad,
+        );
+        const timeDeviation = histogramDistance(
+          sample.timeHistogram,
+          baseline.timeHistogram,
+        );
+        return [
+          [
+            entity.id,
+            Math.min(
+              1,
+              (Math.min(amountDeviation, 6) / 6 +
+                Math.min(frequencyDeviation, 6) / 6 +
+                timeDeviation) /
+                3,
+            ),
+          ] as const,
+        ];
+      }),
+  );
 }

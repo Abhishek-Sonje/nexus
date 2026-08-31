@@ -1,6 +1,7 @@
 export { detectCommunities } from './communities';
 export {
   categoryAnomalyForMembers,
+  categoryAnomalyScores,
   fitCategoryBaselines,
 } from './category-baseline';
 export type {

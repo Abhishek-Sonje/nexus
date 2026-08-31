@@ -3,11 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun ../../node_modules/tsx/dist/cli.mjs watch src/index.ts",
+    "dev": "bun --shell=system run dev:node",
+    "dev:node": "node ../../node_modules/tsx/dist/cli.mjs watch src/index.ts",
     "build": "bun build src/index.ts src/cli/pipeline.ts src/cli/seed.ts --outdir dist --target node",
     "typecheck": "bun ../../node_modules/typescript/bin/tsc --noEmit",
-    "seed": "bun ../../node_modules/tsx/dist/cli.mjs src/cli/seed.ts",
-    "pipeline": "bun ../../node_modules/tsx/dist/cli.mjs src/cli/pipeline.ts"
+    "seed": "bun --shell=system run seed:node",
+    "seed:node": "node ../../node_modules/tsx/dist/cli.mjs src/cli/seed.ts",
+    "pipeline": "bun --shell=system run pipeline:node",
+    "pipeline:node": "node ../../node_modules/tsx/dist/cli.mjs src/cli/pipeline.ts"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
