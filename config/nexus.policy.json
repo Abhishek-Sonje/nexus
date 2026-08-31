@@ -47,5 +47,15 @@
       "elevated": 65,
       "critical": 80
     }
+  },
+  "security": {
+    "authentication": {
+      "maxAttempts": 5,
+      "windowMinutes": 15
+    },
+    "analysisRun": {
+      "maxRequests": 3,
+      "windowMinutes": 60
+    }
   }
 }

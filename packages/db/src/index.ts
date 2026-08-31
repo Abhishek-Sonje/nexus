@@ -1,3 +1,4 @@
+export * from './access';
 export * from './analysis';
 export * from './client';
 export * from './datasets';

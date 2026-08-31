@@ -47,6 +47,16 @@ export const detectorProfileSchema = z.object({
 export const nexusPolicySchema = z.object({
   generator: generatorProfileSchema,
   detector: detectorProfileSchema,
+  security: z.object({
+    authentication: z.object({
+      maxAttempts: z.number().int().positive(),
+      windowMinutes: z.number().int().positive(),
+    }),
+    analysisRun: z.object({
+      maxRequests: z.number().int().positive(),
+      windowMinutes: z.number().int().positive(),
+    }),
+  }),
 });
 
 export type NexusPolicy = z.infer<typeof nexusPolicySchema>;
