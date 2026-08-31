@@ -51,6 +51,7 @@ export const nexusPolicySchema = z.object({
 
 export type NexusPolicy = z.infer<typeof nexusPolicySchema>;
 export type DetectorProfile = z.infer<typeof detectorProfileSchema>;
+export type GeneratorProfile = z.infer<typeof generatorProfileSchema>;
 
 export const serverEnvironmentSchema = z.object({
   NODE_ENV: z
