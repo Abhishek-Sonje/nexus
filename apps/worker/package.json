@@ -18,6 +18,13 @@
     "@nexus/db": "workspace:*",
     "@nexus/detection": "workspace:*",
     "@nexus/synthetic": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.222.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-metrics": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "pg-boss": "^12.29.0",
     "pino": "^10.3.1",
     "zod": "^4.5.4"

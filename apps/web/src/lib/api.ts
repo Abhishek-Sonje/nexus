@@ -1,6 +1,8 @@
 import { createDatabase } from '@nexus/db';
 import { NextResponse } from 'next/server';
 
+import { withServerSpan } from './telemetry-server';
+
 export function apiError(
   code: string,
   message: string,
@@ -17,7 +19,11 @@ export async function withDatabase<T>(
   if (!connectionString) throw new Error('DATABASE_URL is required.');
   const database = createDatabase(connectionString);
   try {
-    return await operation(database);
+    return await withServerSpan(
+      'nexus.database.operation',
+      { 'db.system.name': 'postgresql' },
+      () => operation(database),
+    );
   } finally {
     await database.pool.end();
   }

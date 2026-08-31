@@ -37,6 +37,7 @@ import { z } from 'zod';
 
 import { loadPolicy } from './policy';
 import { generateNarrative } from './narratives';
+import { withSpan } from './telemetry';
 
 const logger = pino({ name: 'nexus-worker' });
 
@@ -83,21 +84,29 @@ async function persistFlaggedNarratives(
           counts[edge.type] = (counts[edge.type] ?? 0) + 1;
           return counts;
         }, {});
-      const narrative = await generateNarrative(
+      const narrative = await withSpan(
+        'nexus.gemini.narrative',
         {
-          communityOrdinal: community.ordinal,
-          memberIds: community.memberIds,
-          score: community.score,
-          riskBand: community.riskBand,
-          features: community.features,
-          evidenceCounts,
+          'nexus.community.ordinal': community.ordinal,
+          'nexus.risk.band': community.riskBand,
         },
-        {
-          modelCode: process.env.GEMINI_MODEL ?? 'gemini-3.7-flash',
-          ...(process.env.GEMINI_API_KEY
-            ? { apiKey: process.env.GEMINI_API_KEY }
-            : {}),
-        },
+        () =>
+          generateNarrative(
+            {
+              communityOrdinal: community.ordinal,
+              memberIds: community.memberIds,
+              score: community.score,
+              riskBand: community.riskBand,
+              features: community.features,
+              evidenceCounts,
+            },
+            {
+              modelCode: process.env.GEMINI_MODEL ?? 'gemini-3.7-flash',
+              ...(process.env.GEMINI_API_KEY
+                ? { apiKey: process.env.GEMINI_API_KEY }
+                : {}),
+            },
+          ),
       );
       await persistNarrative(db, {
         communityId,

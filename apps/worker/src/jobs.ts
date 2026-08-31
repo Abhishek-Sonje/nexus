@@ -7,6 +7,7 @@ import { createDatabase, markAnalysisRunFailed } from '@nexus/db';
 
 import { runPersistedAnalysis } from './pipeline';
 import { loadPolicy } from './policy';
+import { recordQueueLatency, recordRunOutcome, withSpan } from './telemetry';
 
 const logger = pino({ name: 'nexus-worker' });
 
@@ -27,8 +28,20 @@ export async function startJobWorker(databaseUrl: string): Promise<PgBoss> {
       const job = jobs[0];
       if (!job) throw new Error('pg-boss delivered an empty analysis batch.');
       const payload = analysisJobPayloadSchema.parse(job.data);
+      recordQueueLatency(Date.now() - job.createdOn.getTime(), payload.mode);
       try {
-        return await runPersistedAnalysis(payload);
+        const result = await withSpan(
+          'nexus.analysis.job',
+          {
+            'nexus.job.id': job.id,
+            'nexus.run.id': payload.runId,
+            'nexus.dataset.id': payload.datasetId,
+            'nexus.analysis.mode': payload.mode,
+          },
+          () => runPersistedAnalysis(payload),
+        );
+        recordRunOutcome('completed', payload.mode);
+        return result;
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : 'Unknown analysis failure.';
@@ -41,6 +54,7 @@ export async function startJobWorker(databaseUrl: string): Promise<PgBoss> {
           },
           'analysis job failed',
         );
+        recordRunOutcome('failed', payload.mode);
         if (job.retryCount >= job.retryLimit) {
           const { db, pool } = createDatabase(databaseUrl);
           try {

@@ -1,6 +1,6 @@
 # Technology baseline
 
-Verified on 2026-08-31 against official release documentation and resolved through the package registry.
+Verified on 2026-09-01 against official release documentation and resolved through the package registry.
 
 | Area               | Selected baseline                                           |
 | ------------------ | ----------------------------------------------------------- |
@@ -13,5 +13,6 @@ Verified on 2026-08-31 against official release documentation and resolved throu
 | Graph              | Graphology 0.26.0, Louvain 2.0.2, Sigma.js 3.0.3            |
 | Jobs               | pg-boss 12.29.0                                             |
 | Narrative          | @google/genai 2.19.0, stable model code `gemini-3.7-flash`  |
+| Server telemetry   | OpenTelemetry API 1.9.1, Node SDK 0.222.0, SDK 2.11.0       |
 
 The lockfile is authoritative for transitive versions. Pre-release dependencies are not accepted without a recorded architecture decision.
