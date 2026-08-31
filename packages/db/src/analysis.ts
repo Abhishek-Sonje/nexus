@@ -81,7 +81,7 @@ export interface PersistAnalysisInput {
 export async function persistAnalysisResult(
   db: NexusDatabase,
   input: PersistAnalysisInput,
-): Promise<string> {
+): Promise<{ runId: string; communityIdsByOrdinal: Record<number, string> }> {
   return db.transaction(async (transaction) => {
     const [run] = await transaction
       .insert(analysisRuns)
@@ -114,6 +114,7 @@ export async function persistAnalysisResult(
       );
     }
 
+    const communityIdsByOrdinal: Record<number, string> = {};
     for (const scored of input.scoredCommunities) {
       const [community] = await transaction
         .insert(communities)
@@ -125,6 +126,7 @@ export async function persistAnalysisResult(
         })
         .returning({ id: communities.id });
       if (!community) throw new Error('Community insert did not return an id.');
+      communityIdsByOrdinal[scored.ordinal] = community.id;
       for (const batch of chunks(scored.memberIds)) {
         await transaction
           .insert(communityMembers)
@@ -189,6 +191,6 @@ export async function persistAnalysisResult(
         completedAt: new Date(),
       })
       .where(eq(analysisRuns.id, run.id));
-    return run.id;
+    return { runId: run.id, communityIdsByOrdinal };
   });
 }

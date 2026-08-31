@@ -5,6 +5,7 @@ import {
   persistAnalysisResult,
   persistDetectorProfile,
   persistGeneratedDataset,
+  persistNarrative,
 } from '@nexus/db';
 import {
   communitiesFromPartition,
@@ -25,6 +26,7 @@ import type { GeneratedDataset } from '@nexus/synthetic';
 import pino from 'pino';
 
 import { loadPolicy } from './policy';
+import { generateNarrative } from './narratives';
 
 const logger = pino({ name: 'nexus-worker' });
 
@@ -156,7 +158,7 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
     });
     const detectionMs = elapsed(detectionAt);
 
-    const runId = await persistAnalysisResult(db, {
+    const persistedRun = await persistAnalysisResult(db, {
       datasetId: heldOutRecord.id,
       detectorProfileId,
       mode: 'evaluate',
@@ -169,9 +171,53 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
       scoredCommunities: scored,
       evaluation,
     });
+    const flagged = scored
+      .filter((community) => community.flagged)
+      .slice(0, 25);
+    await Promise.all(
+      flagged.map(async (community) => {
+        const communityId =
+          persistedRun.communityIdsByOrdinal[community.ordinal];
+        if (!communityId) return;
+        const memberIds = new Set(community.memberIds);
+        const evidenceCounts = heldOutEvidence.edges
+          .filter(
+            (edge) =>
+              memberIds.has(edge.sourceEntityId) &&
+              memberIds.has(edge.targetEntityId),
+          )
+          .reduce<Record<string, number>>((counts, edge) => {
+            counts[edge.type] = (counts[edge.type] ?? 0) + 1;
+            return counts;
+          }, {});
+        const narrative = await generateNarrative(
+          {
+            communityOrdinal: community.ordinal,
+            memberIds: community.memberIds,
+            score: community.score,
+            riskBand: community.riskBand,
+            features: community.features,
+            evidenceCounts,
+          },
+          {
+            modelCode: process.env.GEMINI_MODEL ?? 'gemini-3.7-flash',
+            ...(process.env.GEMINI_API_KEY
+              ? { apiKey: process.env.GEMINI_API_KEY }
+              : {}),
+          },
+        );
+        await persistNarrative(db, {
+          communityId,
+          ...narrative,
+          ...(narrative.structuredResponse
+            ? { structuredResponse: narrative.structuredResponse }
+            : {}),
+        });
+      }),
+    );
     logger.info(
       {
-        runId,
+        runId: persistedRun.runId,
         tuningDatasetId: tuningRecord.id,
         heldOutDatasetId: heldOutRecord.id,
         selected: tuned.selected,
@@ -179,7 +225,7 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
       'pipeline completed',
     );
     return {
-      runId,
+      runId: persistedRun.runId,
       datasetId: heldOutRecord.id,
       selectedThreshold: tuned.selected.threshold,
       selectedResolution: tuned.selected.resolution,
