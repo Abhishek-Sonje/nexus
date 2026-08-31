@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_DB: nexus
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus-ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nexus -d nexus"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CI: 'true'
+      DATABASE_URL: postgresql://nexus:nexus-ci@127.0.0.1:5432/nexus
+      NEXUS_SESSION_SECRET: ci-session-secret-with-at-least-thirty-two-characters
+      NEXUS_ATTRIBUTE_HASH_KEY: ci-attribute-key-with-at-least-thirty-two-characters
+      NEXUS_TEST_PASSWORD: nexus-ci-password
+      NEXUS_CODE_VERSION: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+      - run: bun install --frozen-lockfile
+      - name: Generate private-gate test hash
+        run: |
+          HASH=$(bun -e "import argon2 from './apps/web/node_modules/argon2'; console.log(await argon2.hash(process.env.NEXUS_TEST_PASSWORD))")
+          echo "NEXUS_ACCESS_PASSWORD_HASH=$HASH" >> "$GITHUB_ENV"
+      - run: bun run format:check
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build
+      - run: bun run db:migrate
+      - run: bun run db:generate
+      - run: git diff --exit-code -- packages/db/drizzle
+      - run: bun run pipeline:run
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
+      - run: bun audit
+      - run: docker build --target web -t nexus-web:ci .
+      - run: docker build --target worker -t nexus-worker:ci .
+      - run: docker build --target migration -t nexus-migration:ci .
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
