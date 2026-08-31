@@ -160,17 +160,17 @@ export function Observatory({
             <Activity />
             <span>Verdict</span>
           </a>
-          <a href="#findings">
+          <a href="/runs">
             <CircleDot />
-            <span>Findings</span>
+            <span>Runs</span>
           </a>
           <a href="#evidence">
             <Route />
             <span>Evidence</span>
           </a>
-          <a href="#provenance">
+          <a href="/methodology">
             <Fingerprint />
-            <span>Provenance</span>
+            <span>Method</span>
           </a>
         </nav>
         <LogoutButton />
@@ -315,7 +315,7 @@ export function Observatory({
               <a
                 className="finding-row"
                 role="row"
-                href="#evidence"
+                href={`/findings/${finding.id}`}
                 key={finding.id}
               >
                 <span className="rank">
