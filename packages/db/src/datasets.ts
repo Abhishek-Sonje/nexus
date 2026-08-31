@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
 
 import type { GeneratedDataset } from '@nexus/synthetic';
-import { and, eq } from 'drizzle-orm';
+import type { DetectionInput, EvaluationTruthGroup } from '@nexus/detection';
+import { and, asc, eq } from 'drizzle-orm';
 
 import type { NexusDatabase } from './client';
 import {
@@ -16,12 +17,109 @@ import {
 
 const INSERT_BATCH_SIZE = 750;
 
+function detectionStatus(
+  value: string,
+): 'captured' | 'settled' | 'failed' | 'reversed' {
+  if (
+    value === 'captured' ||
+    value === 'settled' ||
+    value === 'failed' ||
+    value === 'reversed'
+  )
+    return value;
+  throw new Error(`Unsupported persisted transaction status: ${value}`);
+}
+
 function chunks<T>(items: readonly T[], size = INSERT_BATCH_SIZE): T[][] {
   const result: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
     result.push(items.slice(index, index + size));
   }
   return result;
+}
+
+export async function loadDetectionInput(
+  db: NexusDatabase,
+  datasetId: string,
+): Promise<DetectionInput> {
+  const [entityRows, attributeRows, transactionRows] = await Promise.all([
+    db
+      .select({
+        id: entities.id,
+        category: entities.category,
+        onboardedVia: entities.onboardedVia,
+      })
+      .from(entities)
+      .where(eq(entities.datasetId, datasetId))
+      .orderBy(asc(entities.id)),
+    db
+      .select({
+        entityId: entityAttributeLinks.entityId,
+        type: attributeValues.type,
+        value: attributeValues.valueHash,
+      })
+      .from(entityAttributeLinks)
+      .innerJoin(
+        attributeValues,
+        eq(entityAttributeLinks.attributeValueId, attributeValues.id),
+      )
+      .where(eq(attributeValues.datasetId, datasetId))
+      .orderBy(asc(entityAttributeLinks.entityId), asc(attributeValues.id)),
+    db
+      .select({
+        id: transactions.id,
+        fromEntityId: transactions.fromEntityId,
+        toEntityId: transactions.toEntityId,
+        amountPaise: transactions.amountPaise,
+        occurredAt: transactions.occurredAt,
+        status: transactions.status,
+      })
+      .from(transactions)
+      .where(eq(transactions.datasetId, datasetId))
+      .orderBy(asc(transactions.occurredAt), asc(transactions.id)),
+  ]);
+  return {
+    entities: entityRows,
+    attributes: attributeRows,
+    transactions: transactionRows.map((transaction) => ({
+      ...transaction,
+      amountPaise: transaction.amountPaise.toString(),
+      occurredAt: transaction.occurredAt.toISOString(),
+      status: detectionStatus(transaction.status),
+    })),
+  };
+}
+
+export async function loadEvaluationTruth(
+  db: NexusDatabase,
+  datasetId: string,
+): Promise<EvaluationTruthGroup[]> {
+  const rows = await db
+    .select({
+      id: groundTruthGroups.id,
+      kind: groundTruthGroups.kind,
+      estimatedExposurePaise: groundTruthGroups.estimatedExposurePaise,
+      entityId: groundTruthMembers.entityId,
+    })
+    .from(groundTruthGroups)
+    .leftJoin(
+      groundTruthMembers,
+      eq(groundTruthGroups.id, groundTruthMembers.groupId),
+    )
+    .where(eq(groundTruthGroups.datasetId, datasetId))
+    .orderBy(asc(groundTruthGroups.id), asc(groundTruthMembers.entityId));
+  const groups = new Map<string, EvaluationTruthGroup>();
+  for (const row of rows) {
+    const group = groups.get(row.id) ?? {
+      id: row.id,
+      kind: row.kind,
+      memberIds: [],
+      estimatedExposurePaise: row.estimatedExposurePaise.toString(),
+    };
+    if (row.entityId) group.memberIds.push(row.entityId);
+    groups.set(row.id, group);
+  }
+  return [...groups.values()];
 }
 
 function hashAttribute(value: string, key: string): string {

@@ -30,17 +30,20 @@ describe('investigator narratives', () => {
         generate: () =>
           Promise.resolve({
             text: JSON.stringify({
-              title: 'Rapid pass-through cluster',
               summary: 'The measured network warrants evidence review.',
-              signals: ['Rapid pass-through is the leading signal.'],
-              caveat: 'Synthetic evidence is not proof of fraud.',
+              strongestEvidence: ['Rapid pass-through is the leading signal.'],
+              counterEvidence: ['The dataset is synthetic.'],
+              uncertainty: 'Synthetic evidence is not proof of fraud.',
+              suggestedReviewFocus: ['Review the timestamped flow evidence.'],
             }),
           }),
       },
     });
 
     expect(result.status).toBe('generated');
-    expect(result.structuredResponse?.title).toBe('Rapid pass-through cluster');
+    expect(result.structuredResponse?.strongestEvidence).toEqual([
+      'Rapid pass-through is the leading signal.',
+    ]);
   });
 
   it('falls back when provider structure is invalid', async () => {

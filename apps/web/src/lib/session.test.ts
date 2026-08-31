@@ -16,7 +16,12 @@ describe('private session security', () => {
       'test-session-secret-with-at-least-32-characters';
     const token = await createSessionToken();
     expect(await verifySessionToken(token)).toBe(true);
-    expect(await verifySessionToken(`${token.slice(0, -1)}x`)).toBe(false);
+    const segments = token.split('.');
+    const signature = segments[2];
+    if (!signature) throw new Error('Session token signature is missing.');
+    const changed = signature[0] === 'a' ? 'b' : 'a';
+    segments[2] = `${changed}${signature.slice(1)}`;
+    expect(await verifySessionToken(segments.join('.'))).toBe(false);
   });
 
   it('accepts same-origin mutation requests and rejects cross-origin requests', () => {

@@ -2,11 +2,17 @@ import { performance } from 'node:perf_hooks';
 
 import {
   createDatabase,
+  getLockedDetectorProfile,
+  loadDetectionInput,
+  loadEvaluationTruth,
   persistAnalysisResult,
   persistDetectorProfile,
   persistGeneratedDataset,
   persistNarrative,
 } from '@nexus/db';
+import type { NexusDatabase } from '@nexus/db';
+import type { AnalysisJobPayload } from '@nexus/core';
+import { detectorProfileSchema, entityCategorySchema } from '@nexus/core';
 import {
   communitiesFromPartition,
   deriveEvidence,
@@ -17,18 +23,92 @@ import {
   tuneDetector,
 } from '@nexus/detection';
 import type {
+  CommunityDetectionResult,
   DetectionAttributeLink,
   DetectionEntity,
   DetectionTransaction,
+  EvaluationResult,
+  ScoredCommunity,
 } from '@nexus/detection';
 import { generateDataset } from '@nexus/synthetic';
 import type { GeneratedDataset } from '@nexus/synthetic';
 import pino from 'pino';
+import { z } from 'zod';
 
 import { loadPolicy } from './policy';
 import { generateNarrative } from './narratives';
 
 const logger = pino({ name: 'nexus-worker' });
+
+const robustMetricSchema = z.object({
+  median: z.number(),
+  mad: z.number().positive(),
+});
+const categoryBaselineSchema = z.object({
+  logAmount: robustMetricSchema,
+  frequency: robustMetricSchema,
+  timeHistogram: z.array(z.number().min(0).max(1)).length(6),
+});
+const lockedDetectorConfigurationSchema = detectorProfileSchema.extend({
+  selected: z.object({
+    resolution: z.number().positive(),
+    weightIndex: z.number().int().nonnegative(),
+    threshold: z.number().min(0).max(100),
+    categoryBaselines: z.partialRecord(
+      entityCategorySchema,
+      categoryBaselineSchema,
+    ),
+  }),
+});
+
+async function persistFlaggedNarratives(
+  db: NexusDatabase,
+  communityIdsByOrdinal: Record<number, string>,
+  scored: readonly ScoredCommunity[],
+  evidence: ReturnType<typeof deriveEvidence>['edges'],
+): Promise<void> {
+  const flagged = scored.filter((community) => community.flagged).slice(0, 25);
+  await Promise.all(
+    flagged.map(async (community) => {
+      const communityId = communityIdsByOrdinal[community.ordinal];
+      if (!communityId) return;
+      const memberIds = new Set(community.memberIds);
+      const evidenceCounts = evidence
+        .filter(
+          (edge) =>
+            memberIds.has(edge.sourceEntityId) &&
+            memberIds.has(edge.targetEntityId),
+        )
+        .reduce<Record<string, number>>((counts, edge) => {
+          counts[edge.type] = (counts[edge.type] ?? 0) + 1;
+          return counts;
+        }, {});
+      const narrative = await generateNarrative(
+        {
+          communityOrdinal: community.ordinal,
+          memberIds: community.memberIds,
+          score: community.score,
+          riskBand: community.riskBand,
+          features: community.features,
+          evidenceCounts,
+        },
+        {
+          modelCode: process.env.GEMINI_MODEL ?? 'gemini-3.7-flash',
+          ...(process.env.GEMINI_API_KEY
+            ? { apiKey: process.env.GEMINI_API_KEY }
+            : {}),
+        },
+      );
+      await persistNarrative(db, {
+        communityId,
+        ...narrative,
+        ...(narrative.structuredResponse
+          ? { structuredResponse: narrative.structuredResponse }
+          : {}),
+      });
+    }),
+  );
+}
 
 function detectionData(dataset: GeneratedDataset): {
   entities: DetectionEntity[];
@@ -67,6 +147,146 @@ export interface PipelineResult {
   selectedThreshold: number;
   selectedResolution: number;
   selectedWeightIndex: number;
+}
+
+export async function runPersistedAnalysis(
+  payload: AnalysisJobPayload,
+): Promise<PipelineResult> {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error('DATABASE_URL is required.');
+  const policy = await loadPolicy();
+  const { db, pool } = createDatabase(databaseUrl);
+  try {
+    const loadedAt = performance.now();
+    const input = await loadDetectionInput(db, payload.datasetId);
+    const truth =
+      payload.mode === 'score'
+        ? []
+        : await loadEvaluationTruth(db, payload.datasetId);
+    const loadMs = elapsed(loadedAt);
+    const evidenceAt = performance.now();
+    const evidence = deriveEvidence(input, policy.detector);
+    const graph = projectEvidenceGraph(input.entities, evidence.edges);
+    const evidenceMs = elapsed(evidenceAt);
+
+    let detectorProfileId: string;
+    let selectedResolution: number;
+    let selectedWeightIndex: number;
+    let selectedThreshold: number;
+    let partition: CommunityDetectionResult;
+    let scored: ScoredCommunity[];
+    let evaluation: EvaluationResult | undefined;
+    const detectionAt = performance.now();
+    if (payload.mode === 'tune') {
+      const tuned = tuneDetector({
+        graph,
+        ...input,
+        evidence: evidence.edges,
+        truthGroups: truth,
+        profile: policy.detector,
+      });
+      detectorProfileId = await persistDetectorProfile(db, policy.detector, {
+        ...tuned.selected,
+        categoryBaselines: tuned.categoryBaselines,
+      });
+      selectedResolution = tuned.selected.resolution;
+      selectedWeightIndex = tuned.selected.weightIndex;
+      selectedThreshold = tuned.selected.threshold;
+      partition = detectCommunities(graph, {
+        profile: policy.detector,
+        resolution: selectedResolution,
+      });
+      scored = tuned.communities;
+      evaluation = tuned.evaluation;
+    } else {
+      if (!payload.detectorProfileId)
+        throw new Error('A locked detector profile is required.');
+      const stored = await getLockedDetectorProfile(
+        db,
+        payload.detectorProfileId,
+      );
+      if (!stored)
+        throw new Error('The locked detector profile was not found.');
+      const configuration = lockedDetectorConfigurationSchema.parse(
+        stored.configuration,
+      );
+      detectorProfileId = stored.id;
+      selectedResolution = configuration.selected.resolution;
+      selectedWeightIndex = configuration.selected.weightIndex;
+      selectedThreshold = configuration.selected.threshold;
+      const weights = configuration.weightCandidates[selectedWeightIndex];
+      if (!weights)
+        throw new Error('The locked detector weight selection is invalid.');
+      partition = detectCommunities(graph, {
+        profile: configuration,
+        resolution: selectedResolution,
+      });
+      scored = scoreCommunities({
+        communities: communitiesFromPartition(
+          partition.communities,
+          partition.modularity,
+        ),
+        ...input,
+        evidence: evidence.edges,
+        weights,
+        threshold: selectedThreshold,
+        bands: configuration.bands,
+        categoryBaselines: configuration.selected.categoryBaselines,
+      });
+      evaluation =
+        payload.mode === 'evaluate'
+          ? evaluateThresholds(scored, truth, {
+              ...configuration,
+              thresholdCandidates: [selectedThreshold],
+            })
+          : undefined;
+    }
+    const detectionMs = elapsed(detectionAt);
+    const persisted = await persistAnalysisResult(db, {
+      runId: payload.runId,
+      datasetId: payload.datasetId,
+      detectorProfileId,
+      mode: payload.mode,
+      randomSeed: policy.detector.randomSeed,
+      codeVersion: process.env.NEXUS_CODE_VERSION ?? 'development',
+      inputChecksum:
+        (
+          await db.query.datasets.findFirst({
+            columns: { checksum: true },
+            where: (table, { eq }) => eq(table.id, payload.datasetId),
+          })
+        )?.checksum ?? payload.datasetId,
+      stageTimings: { loadMs, evidenceMs, detectionMs },
+      evidence: evidence.edges,
+      partition,
+      scoredCommunities: scored,
+      ...(evaluation ? { evaluation } : {}),
+    });
+    await persistFlaggedNarratives(
+      db,
+      persisted.communityIdsByOrdinal,
+      scored,
+      evidence.edges,
+    );
+    logger.info(
+      {
+        jobRequestId: payload.requestId,
+        runId: persisted.runId,
+        datasetId: payload.datasetId,
+        mode: payload.mode,
+      },
+      'persisted analysis completed',
+    );
+    return {
+      runId: persisted.runId,
+      datasetId: payload.datasetId,
+      selectedThreshold,
+      selectedResolution,
+      selectedWeightIndex,
+    };
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function runCompletePipeline(): Promise<PipelineResult> {
@@ -172,49 +392,11 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
       scoredCommunities: scored,
       evaluation,
     });
-    const flagged = scored
-      .filter((community) => community.flagged)
-      .slice(0, 25);
-    await Promise.all(
-      flagged.map(async (community) => {
-        const communityId =
-          persistedRun.communityIdsByOrdinal[community.ordinal];
-        if (!communityId) return;
-        const memberIds = new Set(community.memberIds);
-        const evidenceCounts = heldOutEvidence.edges
-          .filter(
-            (edge) =>
-              memberIds.has(edge.sourceEntityId) &&
-              memberIds.has(edge.targetEntityId),
-          )
-          .reduce<Record<string, number>>((counts, edge) => {
-            counts[edge.type] = (counts[edge.type] ?? 0) + 1;
-            return counts;
-          }, {});
-        const narrative = await generateNarrative(
-          {
-            communityOrdinal: community.ordinal,
-            memberIds: community.memberIds,
-            score: community.score,
-            riskBand: community.riskBand,
-            features: community.features,
-            evidenceCounts,
-          },
-          {
-            modelCode: process.env.GEMINI_MODEL ?? 'gemini-3.7-flash',
-            ...(process.env.GEMINI_API_KEY
-              ? { apiKey: process.env.GEMINI_API_KEY }
-              : {}),
-          },
-        );
-        await persistNarrative(db, {
-          communityId,
-          ...narrative,
-          ...(narrative.structuredResponse
-            ? { structuredResponse: narrative.structuredResponse }
-            : {}),
-        });
-      }),
+    await persistFlaggedNarratives(
+      db,
+      persistedRun.communityIdsByOrdinal,
+      scored,
+      heldOutEvidence.edges,
     );
     logger.info(
       {

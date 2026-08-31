@@ -13,10 +13,11 @@ export interface NarrativeInput {
 }
 
 const narrativeResponseSchema = z.object({
-  title: z.string().min(1).max(100),
   summary: z.string().min(1).max(600),
-  signals: z.array(z.string().min(1).max(180)).min(1).max(4),
-  caveat: z.string().min(1).max(240),
+  strongestEvidence: z.array(z.string().min(1).max(180)).min(1).max(4),
+  counterEvidence: z.array(z.string().min(1).max(180)).max(4),
+  uncertainty: z.string().min(1).max(240),
+  suggestedReviewFocus: z.array(z.string().min(1).max(180)).min(1).max(4),
 });
 
 export type StructuredNarrative = z.infer<typeof narrativeResponseSchema>;
@@ -73,17 +74,33 @@ function geminiGenerator(
           responseJsonSchema: {
             type: 'object',
             additionalProperties: false,
-            required: ['title', 'summary', 'signals', 'caveat'],
+            required: [
+              'summary',
+              'strongestEvidence',
+              'counterEvidence',
+              'uncertainty',
+              'suggestedReviewFocus',
+            ],
             properties: {
-              title: { type: 'string', maxLength: 100 },
               summary: { type: 'string', maxLength: 600 },
-              signals: {
+              strongestEvidence: {
                 type: 'array',
                 minItems: 1,
                 maxItems: 4,
                 items: { type: 'string', maxLength: 180 },
               },
-              caveat: { type: 'string', maxLength: 240 },
+              counterEvidence: {
+                type: 'array',
+                maxItems: 4,
+                items: { type: 'string', maxLength: 180 },
+              },
+              uncertainty: { type: 'string', maxLength: 240 },
+              suggestedReviewFocus: {
+                type: 'array',
+                minItems: 1,
+                maxItems: 4,
+                items: { type: 'string', maxLength: 180 },
+              },
             },
           },
         },

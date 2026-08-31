@@ -52,6 +52,12 @@
     "graphNeighborhoodHops": 1,
     "maxGraphNodes": 100
   },
+  "queue": {
+    "version": "2026-09-01.1",
+    "retryLimit": 3,
+    "retryDelaySeconds": 30,
+    "expireInSeconds": 900
+  },
   "security": {
     "authentication": {
       "maxAttempts": 5,

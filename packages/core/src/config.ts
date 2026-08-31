@@ -51,6 +51,12 @@ export const nexusPolicySchema = z.object({
     graphNeighborhoodHops: z.literal(1),
     maxGraphNodes: z.number().int().min(10).max(500),
   }),
+  queue: z.object({
+    version: z.string().min(1),
+    retryLimit: z.number().int().min(0).max(10),
+    retryDelaySeconds: z.number().int().positive(),
+    expireInSeconds: z.number().int().positive(),
+  }),
   security: z.object({
     authentication: z.object({
       maxAttempts: z.number().int().positive(),

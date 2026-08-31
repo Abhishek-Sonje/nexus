@@ -7,7 +7,7 @@ import type {
   EvidenceEdge,
   ScoredCommunity,
 } from '@nexus/detection';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import type { NexusDatabase } from './client';
 import {
@@ -62,6 +62,7 @@ export async function persistDetectorProfile(
 }
 
 export interface PersistAnalysisInput {
+  runId?: string;
   datasetId: string;
   detectorProfileId: string;
   mode: 'tune' | 'evaluate' | 'score';
@@ -83,20 +84,32 @@ export async function persistAnalysisResult(
   input: PersistAnalysisInput,
 ): Promise<{ runId: string; communityIdsByOrdinal: Record<number, string> }> {
   return db.transaction(async (transaction) => {
-    const [run] = await transaction
-      .insert(analysisRuns)
-      .values({
-        datasetId: input.datasetId,
-        detectorProfileId: input.detectorProfileId,
-        mode: input.mode,
-        status: 'running',
-        randomSeed: input.randomSeed,
-        codeVersion: input.codeVersion,
-        inputChecksum: input.inputChecksum,
-        stageTimings: input.stageTimings,
-        startedAt: new Date(),
-      })
-      .returning({ id: analysisRuns.id });
+    const values = {
+      datasetId: input.datasetId,
+      detectorProfileId: input.detectorProfileId,
+      mode: input.mode,
+      status: 'running' as const,
+      randomSeed: input.randomSeed,
+      codeVersion: input.codeVersion,
+      inputChecksum: input.inputChecksum,
+      stageTimings: input.stageTimings,
+      startedAt: new Date(),
+    };
+    const [run] = input.runId
+      ? await transaction
+          .update(analysisRuns)
+          .set(values)
+          .where(
+            and(
+              eq(analysisRuns.id, input.runId),
+              eq(analysisRuns.status, 'queued'),
+            ),
+          )
+          .returning({ id: analysisRuns.id })
+      : await transaction
+          .insert(analysisRuns)
+          .values(values)
+          .returning({ id: analysisRuns.id });
     if (!run) throw new Error('Analysis run insert did not return an id.');
 
     for (const batch of chunks(input.evidence)) {
