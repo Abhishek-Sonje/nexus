@@ -491,10 +491,18 @@ dd {
   color: var(--mineral-faint);
   font-size: 9px;
 }
-.relationship-map svg {
+.sigma-stage {
   width: 100%;
   height: 100%;
-  overflow: visible;
+}
+.graph-loading {
+  height: 310px;
+  display: grid;
+  place-items: center;
+  border-bottom: 1px solid var(--rule);
+  color: var(--mineral-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
 }
 .relationship-map line {
   stroke: var(--rule);

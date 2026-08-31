@@ -48,6 +48,10 @@
       "critical": 80
     }
   },
+  "presentation": {
+    "graphNeighborhoodHops": 1,
+    "maxGraphNodes": 100
+  },
   "security": {
     "authentication": {
       "maxAttempts": 5,

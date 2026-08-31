@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
+import { BoundedGraph } from './bounded-graph';
 import { LogoutButton } from './logout-button';
 
 const paise = new Intl.NumberFormat('en-IN', {
@@ -61,68 +62,6 @@ function CostCurve({
         <span>higher threshold</span>
       </div>
     </div>
-  );
-}
-
-function RelationshipMap({
-  focus,
-}: {
-  focus: NonNullable<DashboardSnapshot['focus']>;
-}) {
-  const members = focus.members.slice(0, 12);
-  const positions = new Map(
-    members.map((member, index) => {
-      const angle =
-        (index / Math.max(1, members.length)) * Math.PI * 2 - Math.PI / 2;
-      return [
-        member.id,
-        { x: 50 + Math.cos(angle) * 36, y: 50 + Math.sin(angle) * 35 },
-      ] as const;
-    }),
-  );
-  return (
-    <figure className="relationship-map">
-      <figcaption>
-        <span>Bounded relationship view</span>
-        <small>Top finding · first 12 members</small>
-      </figcaption>
-      <svg viewBox="0 0 100 100" role="img" aria-labelledby="network-title">
-        <title id="network-title">
-          Network evidence for the highest-ranked community
-        </title>
-        {focus.evidence.slice(0, 30).map((edge) => {
-          const source = positions.get(edge.sourceEntityId);
-          const target = positions.get(edge.targetEntityId);
-          if (!source || !target) return null;
-          return (
-            <line
-              key={edge.id}
-              x1={source.x}
-              y1={source.y}
-              x2={target.x}
-              y2={target.y}
-              className={`network-edge network-${edge.type}`}
-            />
-          );
-        })}
-        {members.map((member, index) => {
-          const position = positions.get(member.id);
-          if (!position) return null;
-          return (
-            <g key={member.id}>
-              <circle
-                cx={position.x}
-                cy={position.y}
-                r={index === 0 ? 4.3 : 3.2}
-              />
-              <text x={position.x} y={position.y + 7}>
-                {member.displayName.slice(0, 10)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </figure>
   );
 }
 
@@ -361,7 +300,7 @@ export function Observatory({
                 ))}
               </div>
               <div className="relationship-column">
-                <RelationshipMap focus={snapshot.focus} />
+                <BoundedGraph focus={snapshot.focus} />
                 <div
                   className="relationship-list"
                   aria-label="Relationship evidence table"

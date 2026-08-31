@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, or } from 'drizzle-orm';
 
 import type { NexusDatabase } from './client';
 import {
@@ -142,4 +142,57 @@ export async function getEvaluationCurve(db: NexusDatabase, runId: string) {
     .from(evaluationPoints)
     .where(eq(evaluationPoints.runId, runId))
     .orderBy(asc(evaluationPoints.threshold));
+}
+
+export async function getFindingGraph(
+  db: NexusDatabase,
+  findingId: string,
+  maxNodes: number,
+) {
+  const [community] = await db
+    .select({ id: communities.id, runId: communities.runId })
+    .from(communities)
+    .where(eq(communities.id, findingId))
+    .limit(1);
+  if (!community) return null;
+  const selected = await db
+    .select({ entityId: communityMembers.entityId })
+    .from(communityMembers)
+    .where(eq(communityMembers.communityId, findingId));
+  const selectedIds = selected.map(({ entityId }) => entityId);
+  if (selectedIds.length === 0) return { nodes: [], edges: [] };
+  const candidateEdges = await db
+    .select()
+    .from(evidenceEdges)
+    .where(
+      and(
+        eq(evidenceEdges.runId, community.runId),
+        or(
+          inArray(evidenceEdges.sourceEntityId, selectedIds),
+          inArray(evidenceEdges.targetEntityId, selectedIds),
+        ),
+      ),
+    )
+    .orderBy(desc(evidenceEdges.contribution), asc(evidenceEdges.id));
+  const nodeIds = new Set(selectedIds);
+  for (const edge of candidateEdges) {
+    if (nodeIds.size >= maxNodes) break;
+    nodeIds.add(edge.sourceEntityId);
+    if (nodeIds.size < maxNodes) nodeIds.add(edge.targetEntityId);
+  }
+  const boundedEdges = candidateEdges.filter(
+    (edge) =>
+      nodeIds.has(edge.sourceEntityId) && nodeIds.has(edge.targetEntityId),
+  );
+  const nodes = await db
+    .select({
+      id: entities.id,
+      label: entities.displayName,
+      category: entities.category,
+      type: entities.type,
+    })
+    .from(entities)
+    .where(inArray(entities.id, [...nodeIds]))
+    .orderBy(asc(entities.id));
+  return { nodes, edges: boundedEdges };
 }

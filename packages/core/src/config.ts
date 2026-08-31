@@ -47,6 +47,10 @@ export const detectorProfileSchema = z.object({
 export const nexusPolicySchema = z.object({
   generator: generatorProfileSchema,
   detector: detectorProfileSchema,
+  presentation: z.object({
+    graphNeighborhoodHops: z.literal(1),
+    maxGraphNodes: z.number().int().min(10).max(500),
+  }),
   security: z.object({
     authentication: z.object({
       maxAttempts: z.number().int().positive(),
