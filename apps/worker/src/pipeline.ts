@@ -125,7 +125,7 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
     const detectorProfileId = await persistDetectorProfile(
       db,
       policy.detector,
-      { ...tuned.selected },
+      { ...tuned.selected, categoryBaselines: tuned.categoryBaselines },
     );
 
     const detectionAt = performance.now();
@@ -151,6 +151,7 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
         policy.detector.weightCandidates[0]!,
       threshold: tuned.selected.threshold,
       bands: policy.detector.bands,
+      categoryBaselines: tuned.categoryBaselines,
     });
     const evaluation = evaluateThresholds(scored, heldOutDataset.truthGroups, {
       ...policy.detector,

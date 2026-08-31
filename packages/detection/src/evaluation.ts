@@ -43,25 +43,45 @@ export function evaluateAtThreshold(
   threshold: number,
   profile: DetectorProfile,
 ): EvaluationPoint {
-  const flagged = communities.filter((community) => community.score >= threshold);
+  const flagged = communities.filter(
+    (community) => community.flagEligible && community.score >= threshold,
+  );
   const rings = truthGroups.filter((group) => group.kind === 'ring');
   const ringMemberIds = new Set(rings.flatMap((group) => group.memberIds));
   const flaggedMemberIds = new Set(flagged.flatMap((group) => group.memberIds));
   const truePositiveEntities = [...flaggedMemberIds].filter((id) =>
     ringMemberIds.has(id),
   ).length;
-  const matchedRings = rings.filter((ring) =>
-    flagged.some(
-      (community) =>
-        jaccard(community.memberIds, ring.memberIds) >= profile.matchJaccard,
-    ),
+  const candidateMatches = flagged
+    .flatMap((community, communityIndex) =>
+      rings.map((ring, ringIndex) => ({
+        communityIndex,
+        ringIndex,
+        overlap: jaccard(community.memberIds, ring.memberIds),
+      })),
+    )
+    .filter((match) => match.overlap >= profile.matchJaccard)
+    .sort(
+      (left, right) =>
+        right.overlap - left.overlap ||
+        left.communityIndex - right.communityIndex ||
+        left.ringIndex - right.ringIndex,
+    );
+  const matchedCommunityIndexes = new Set<number>();
+  const matchedRingIndexes = new Set<number>();
+  for (const match of candidateMatches) {
+    if (
+      matchedCommunityIndexes.has(match.communityIndex) ||
+      matchedRingIndexes.has(match.ringIndex)
+    )
+      continue;
+    matchedCommunityIndexes.add(match.communityIndex);
+    matchedRingIndexes.add(match.ringIndex);
+  }
+  const matchedRings = rings.filter((_, index) =>
+    matchedRingIndexes.has(index),
   );
-  const truePositiveCommunities = flagged.filter((community) =>
-    rings.some(
-      (ring) =>
-        jaccard(community.memberIds, ring.memberIds) >= profile.matchJaccard,
-    ),
-  ).length;
+  const truePositiveCommunities = matchedCommunityIndexes.size;
   const falsePositiveCount = flagged.length - truePositiveCommunities;
   const reviewCostPerFinding =
     (BigInt(profile.economics.analystHourlyRatePaise) *
@@ -71,10 +91,7 @@ export function evaluateAtThreshold(
   const matchedIds = new Set(matchedRings.map((ring) => ring.id));
   const missedExposurePaise = rings
     .filter((ring) => !matchedIds.has(ring.id))
-    .reduce(
-      (total, ring) => total + BigInt(ring.estimatedExposurePaise),
-      0n,
-    );
+    .reduce((total, ring) => total + BigInt(ring.estimatedExposurePaise), 0n);
 
   return {
     threshold,

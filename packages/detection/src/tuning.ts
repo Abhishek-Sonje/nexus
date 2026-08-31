@@ -1,13 +1,12 @@
 import type { DetectorProfile } from '@nexus/core';
 
+import { fitCategoryBaselines } from './category-baseline';
+import type { CategoryBaselines } from './category-baseline';
 import { detectCommunities } from './communities';
 import { evaluateThresholds } from './evaluation';
 import type { EvaluationResult, EvaluationTruthGroup } from './evaluation';
 import type { DetectionGraph } from './graph';
-import {
-  communitiesFromPartition,
-  scoreCommunities,
-} from './scoring';
+import { communitiesFromPartition, scoreCommunities } from './scoring';
 import type { ScoredCommunity } from './scoring';
 import type {
   DetectionEntity,
@@ -38,9 +37,20 @@ export interface TuningResult {
   candidates: TuningCandidate[];
   communities: ScoredCommunity[];
   evaluation: EvaluationResult;
+  categoryBaselines: CategoryBaselines;
 }
 
 export function tuneDetector(input: TuningInput): TuningResult {
+  const ringMemberIds = new Set(
+    input.truthGroups
+      .filter((group) => group.kind === 'ring')
+      .flatMap((group) => group.memberIds),
+  );
+  const categoryBaselines = fitCategoryBaselines(
+    input.entities,
+    input.transactions,
+    ringMemberIds,
+  );
   const attempts: Array<{
     candidate: TuningCandidate;
     communities: ScoredCommunity[];
@@ -57,7 +67,10 @@ export function tuneDetector(input: TuningInput): TuningResult {
       partition.modularity,
     );
 
-    for (const [weightIndex, weights] of input.profile.weightCandidates.entries()) {
+    for (const [
+      weightIndex,
+      weights,
+    ] of input.profile.weightCandidates.entries()) {
       const communities = scoreCommunities({
         communities: candidates,
         entities: input.entities,
@@ -66,6 +79,7 @@ export function tuneDetector(input: TuningInput): TuningResult {
         weights,
         threshold: 0,
         bands: input.profile.bands,
+        categoryBaselines,
       });
       const evaluation = evaluateThresholds(
         communities,
@@ -94,8 +108,7 @@ export function tuneDetector(input: TuningInput): TuningResult {
           BigInt(right.candidate.totalCostPaise),
       ) ||
       right.candidate.ringRecall - left.candidate.ringRecall ||
-      right.candidate.communityPrecision -
-        left.candidate.communityPrecision ||
+      right.candidate.communityPrecision - left.candidate.communityPrecision ||
       left.candidate.resolution - right.candidate.resolution ||
       left.candidate.weightIndex - right.candidate.weightIndex,
   )[0];
@@ -106,8 +119,10 @@ export function tuneDetector(input: TuningInput): TuningResult {
     candidates: attempts.map((attempt) => attempt.candidate),
     communities: best.communities.map((community) => ({
       ...community,
-      flagged: community.score >= best.candidate.threshold,
+      flagged:
+        community.flagEligible && community.score >= best.candidate.threshold,
     })),
     evaluation: best.evaluation,
+    categoryBaselines,
   };
 }

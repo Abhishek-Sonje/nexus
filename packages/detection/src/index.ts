@@ -1,13 +1,19 @@
 export { detectCommunities } from './communities';
+export {
+  categoryAnomalyForMembers,
+  fitCategoryBaselines,
+} from './category-baseline';
+export type {
+  CategoryBaseline,
+  CategoryBaselines,
+  RobustMetricBaseline,
+} from './category-baseline';
 export type {
   CommunityDetectionResult,
   DetectCommunitiesOptions,
 } from './communities';
 export { deriveEvidence } from './evidence';
-export {
-  evaluateAtThreshold,
-  evaluateThresholds,
-} from './evaluation';
+export { evaluateAtThreshold, evaluateThresholds } from './evaluation';
 export type {
   EvaluationPoint,
   EvaluationResult,
@@ -26,11 +32,7 @@ export {
   scoreCommunities,
 } from './scoring';
 export { tuneDetector } from './tuning';
-export type {
-  TuningCandidate,
-  TuningInput,
-  TuningResult,
-} from './tuning';
+export type { TuningCandidate, TuningInput, TuningResult } from './tuning';
 export type {
   CommunityCandidate,
   ScoredCommunity,

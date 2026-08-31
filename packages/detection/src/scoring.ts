@@ -1,5 +1,7 @@
 import type { DetectorProfile, RiskFeatureVector } from '@nexus/core';
 
+import { categoryAnomalyForMembers } from './category-baseline';
+import type { CategoryBaselines } from './category-baseline';
 import type {
   DetectionEntity,
   DetectionTransaction,
@@ -19,6 +21,7 @@ export interface ScoredCommunity extends CommunityCandidate {
   score: number;
   riskBand: 'monitor' | 'review' | 'elevated' | 'critical';
   flagged: boolean;
+  flagEligible: boolean;
   features: RiskFeatureVector;
   explanation: string[];
 }
@@ -31,6 +34,7 @@ export interface ScoreCommunitiesInput {
   weights: WeightSet;
   threshold: number;
   bands: DetectorProfile['bands'];
+  categoryBaselines?: CategoryBaselines;
 }
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value));
@@ -39,35 +43,12 @@ function pairKey(left: string, right: string): string {
   return left < right ? `${left}\u0000${right}` : `${right}\u0000${left}`;
 }
 
-function categoryDeviation(
-  memberIds: Set<string>,
-  entities: readonly DetectionEntity[],
-): number {
-  const categorized = entities.filter((entity) => entity.category);
-  const members = categorized.filter((entity) => memberIds.has(entity.id));
-  if (members.length === 0 || categorized.length === 0) return 0;
-
-  const categories = new Set(members.map((entity) => entity.category));
-  let largestDeviation = 0;
-  for (const category of categories) {
-    const communityShare =
-      members.filter((entity) => entity.category === category).length /
-      members.length;
-    const populationShare =
-      categorized.filter((entity) => entity.category === category).length /
-      categorized.length;
-    largestDeviation = Math.max(
-      largestDeviation,
-      communityShare - populationShare,
-    );
-  }
-  return clamp(largestDeviation);
-}
-
 export function extractCommunityFeatures(
   community: CommunityCandidate,
   entities: readonly DetectionEntity[],
+  transactions: readonly DetectionTransaction[],
   evidence: readonly EvidenceEdge[],
+  categoryBaselines?: CategoryBaselines,
 ): RiskFeatureVector {
   const members = new Set(community.memberIds);
   const internal = evidence.filter(
@@ -100,7 +81,12 @@ export function extractCommunityFeatures(
     ),
     sharedDeviceDensity: densityFor('shared_device'),
     graphDensity: clamp(uniquePairs.size / possiblePairs),
-    categoryAnomaly: categoryDeviation(members, entities),
+    categoryAnomaly: categoryAnomalyForMembers(
+      members,
+      entities,
+      transactions,
+      categoryBaselines,
+    ),
   };
 }
 
@@ -152,28 +138,42 @@ function explanations(features: RiskFeatureVector): string[] {
 export function scoreCommunities(
   input: ScoreCommunitiesInput,
 ): ScoredCommunity[] {
-  void input.transactions;
   return input.communities
     .map((community) => {
       const features = extractCommunityFeatures(
         community,
         input.entities,
+        input.transactions,
         input.evidence,
+        input.categoryBaselines,
       );
       const score = scoreFeatures(features, input.weights);
+      const members = new Set(community.memberIds);
+      const internalEvidenceTypes = new Set(
+        input.evidence
+          .filter(
+            (edge) =>
+              members.has(edge.sourceEntityId) &&
+              members.has(edge.targetEntityId),
+          )
+          .map((edge) => edge.type),
+      );
+      const flagEligible =
+        internalEvidenceTypes.has('fast_flow') ||
+        internalEvidenceTypes.has('shared_payout_account');
       return {
         ...community,
         rank: 0,
         score,
         riskBand: riskBand(score, input.bands),
-        flagged: score >= input.threshold,
+        flagged: flagEligible && score >= input.threshold,
+        flagEligible,
         features,
         explanation: explanations(features),
       };
     })
     .sort(
-      (left, right) =>
-        right.score - left.score || left.ordinal - right.ordinal,
+      (left, right) => right.score - left.score || left.ordinal - right.ordinal,
     )
     .map((community, index) => ({ ...community, rank: index + 1 }));
 }

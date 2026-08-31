@@ -69,6 +69,7 @@ describe('community scoring', () => {
     const features = extractCommunityFeatures(
       { ordinal: 0, memberIds: ['a', 'b'], modularity: 0.4 },
       entities,
+      [],
       edges,
     );
     expect(features).toMatchObject({
@@ -93,6 +94,45 @@ describe('community scoring', () => {
     expect(scored[0]?.ordinal).toBe(0);
     expect(scored[0]?.explanation).toHaveLength(3);
     expect(scored[0]?.score).toBeGreaterThan(scored[1]?.score ?? 0);
+    expect(scored[1]?.flagEligible).toBe(false);
+    expect(scored[1]?.flagged).toBe(false);
+  });
+
+  it('matches each ring and finding at most once', () => {
+    const base = {
+      modularity: 0.4,
+      score: 80,
+      riskBand: 'critical' as const,
+      flagged: true,
+      flagEligible: true,
+      features: {
+        fastFlowDensity: 1,
+        payoutConcentration: 0,
+        sharedDeviceDensity: 0,
+        graphDensity: 1,
+        categoryAnomaly: 0,
+      },
+      explanation: ['rapid pass-through'],
+    };
+    const result = evaluateThresholds(
+      [
+        { ...base, ordinal: 0, rank: 1, memberIds: ['a', 'b'] },
+        { ...base, ordinal: 1, rank: 2, memberIds: ['c', 'd'] },
+      ],
+      [
+        {
+          id: 'ring',
+          kind: 'ring',
+          memberIds: ['a', 'b', 'c', 'd'],
+          estimatedExposurePaise: '1000000',
+        },
+      ],
+      { ...profile, thresholdCandidates: [70] },
+    );
+
+    expect(result.selected.ringRecall).toBe(1);
+    expect(result.selected.communityPrecision).toBe(0.5);
+    expect(result.selected.falsePositiveCount).toBe(1);
   });
 });
 
@@ -107,6 +147,7 @@ describe('held-out evaluation economics', () => {
         score: 80,
         riskBand: 'critical' as const,
         flagged: true,
+        flagEligible: true,
         features: {
           fastFlowDensity: 1,
           payoutConcentration: 1,
@@ -124,6 +165,7 @@ describe('held-out evaluation economics', () => {
         score: 50,
         riskBand: 'review' as const,
         flagged: true,
+        flagEligible: true,
         features: {
           fastFlowDensity: 0,
           payoutConcentration: 0,

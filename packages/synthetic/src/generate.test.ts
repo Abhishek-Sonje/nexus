@@ -40,6 +40,9 @@ describe('synthetic generator', () => {
     expect(
       dataset.truthGroups.filter((group) => group.kind === 'legitimate_dense'),
     ).toHaveLength(3);
+    expect(
+      dataset.truthGroups.filter((group) => group.kind === 'isolated'),
+    ).toHaveLength(1);
     expect(dataset.transactions).toHaveLength(profile.transactionCount);
   });
 });

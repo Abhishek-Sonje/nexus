@@ -215,6 +215,18 @@ export function generateDataset(
   legitimateSizes.forEach((size, index) =>
     addGroup('legitimate_dense', size, index),
   );
+  const labeledMemberIds = new Set(
+    truthGroups.flatMap((group) => group.memberIds),
+  );
+  truthGroups.push({
+    id: deterministicUuid(rng),
+    kind: 'isolated',
+    label: 'Isolated clean population',
+    memberIds: entities
+      .filter((entity) => !labeledMemberIds.has(entity.id))
+      .map((entity) => entity.id),
+    estimatedExposurePaise: '0',
+  });
 
   const cleanTransactions: GeneratedTransaction[] = [];
   const remaining = Math.max(
