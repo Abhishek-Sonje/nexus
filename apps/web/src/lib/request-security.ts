@@ -2,7 +2,12 @@ import { createHmac } from 'node:crypto';
 
 export function hasValidOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
-  if (!origin) return request.headers.get('sec-fetch-site') === 'same-origin';
+  const secFetchSite = request.headers.get('sec-fetch-site');
+
+  if (!origin || (process.env.NODE_ENV !== 'production' && origin === 'null')) {
+    return secFetchSite === 'same-origin';
+  }
+
   return origin === new URL(request.url).origin;
 }
 
