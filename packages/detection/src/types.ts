@@ -1,4 +1,5 @@
 import type { EvidenceType } from '@nexus/core';
+import type { EntityCategory } from '@nexus/core';
 
 export type DetectionAttributeType =
   | 'device_fingerprint'
@@ -6,6 +7,8 @@ export type DetectionAttributeType =
 
 export interface DetectionEntity {
   id: string;
+  category?: EntityCategory;
+  onboardedVia?: 'aggregator' | 'direct';
 }
 
 export interface DetectionAttributeLink {
