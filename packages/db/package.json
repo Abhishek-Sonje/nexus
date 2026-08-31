@@ -7,10 +7,10 @@
     "./schema": "./src/schema.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "build": "bun ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "typecheck": "bun ../../node_modules/typescript/bin/tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/migrate.ts"
+    "db:migrate": "bun ../../node_modules/tsx/dist/cli.mjs src/migrate.ts"
   },
   "dependencies": {
     "@nexus/core": "workspace:*",

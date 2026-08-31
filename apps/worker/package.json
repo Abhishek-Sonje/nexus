@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
-    "seed": "tsx src/cli/seed.ts",
-    "pipeline": "tsx src/cli/pipeline.ts"
+    "dev": "bun ../../node_modules/tsx/dist/cli.mjs watch src/index.ts",
+    "build": "bun ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "typecheck": "bun ../../node_modules/typescript/bin/tsc --noEmit",
+    "seed": "bun ../../node_modules/tsx/dist/cli.mjs src/cli/seed.ts",
+    "pipeline": "bun ../../node_modules/tsx/dist/cli.mjs src/cli/pipeline.ts"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

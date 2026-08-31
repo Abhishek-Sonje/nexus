@@ -1,0 +1,51 @@
+{
+  "generator": {
+    "version": "2026-08-31.1",
+    "entityCount": 2000,
+    "transactionCount": 50000,
+    "ringCount": 20,
+    "legitimateDenseCount": 20,
+    "minRingSize": 5,
+    "maxRingSize": 11,
+    "seeds": {
+      "tuning": "nexus-tuning-2026-08-31",
+      "heldOut": "nexus-heldout-2026-08-31",
+      "demo": "nexus-demo-2026-08-31"
+    }
+  },
+  "detector": {
+    "version": "2026-08-31.1",
+    "randomSeed": "nexus-louvain-2026-08-31",
+    "flowWindowHours": 6,
+    "flowRatio": 0.6,
+    "attributeDegreeCap": 12,
+    "matchJaccard": 0.5,
+    "resolutionCandidates": [0.7, 0.85, 1, 1.15],
+    "thresholdCandidates": [45, 50, 55, 60, 65, 70, 75, 80],
+    "weightCandidates": [
+      {
+        "fastFlowDensity": 0.35,
+        "payoutConcentration": 0.25,
+        "sharedDeviceDensity": 0.1,
+        "graphDensity": 0.1,
+        "categoryAnomaly": 0.2
+      },
+      {
+        "fastFlowDensity": 0.4,
+        "payoutConcentration": 0.25,
+        "sharedDeviceDensity": 0.05,
+        "graphDensity": 0.1,
+        "categoryAnomaly": 0.2
+      }
+    ],
+    "economics": {
+      "reviewMinutes": 15,
+      "analystHourlyRatePaise": "100000"
+    },
+    "bands": {
+      "review": 50,
+      "elevated": 65,
+      "critical": 80
+    }
+  }
+}
