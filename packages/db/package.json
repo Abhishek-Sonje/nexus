@@ -7,13 +7,15 @@
     "./schema": "./src/schema.ts"
   },
   "scripts": {
-    "build": "bun ../../node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts --outdir dist --target node",
     "typecheck": "bun ../../node_modules/typescript/bin/tsc --noEmit",
     "db:generate": "bun node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "bun ../../node_modules/tsx/dist/cli.mjs src/migrate.ts"
   },
   "dependencies": {
     "@nexus/core": "workspace:*",
+    "@nexus/detection": "workspace:*",
+    "@nexus/synthetic": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0"
   },
