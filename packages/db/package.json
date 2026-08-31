@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./dashboard": "./src/dashboard.ts",
     "./schema": "./src/schema.ts"
   },
   "scripts": {

@@ -10,6 +10,7 @@
     "paths": {
       "@nexus/core": ["./packages/core/src/index.ts"],
       "@nexus/db": ["./packages/db/src/index.ts"],
+      "@nexus/db/dashboard": ["./packages/db/src/dashboard.ts"],
       "@nexus/db/schema": ["./packages/db/src/schema.ts"],
       "@nexus/detection": ["./packages/detection/src/index.ts"],
       "@nexus/synthetic": ["./packages/synthetic/src/index.ts"]
