@@ -1,0 +1,40 @@
+{
+  "name": "nexus",
+  "private": true,
+  "packageManager": "bun@1.4.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter @nexus/web dev",
+    "dev:worker": "bun run --filter @nexus/worker dev",
+    "build": "bun run --filter '*' build",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "bun run --filter @nexus/db db:generate",
+    "db:migrate": "bun run --filter @nexus/db db:migrate",
+    "data:seed": "bun run --filter @nexus/worker seed",
+    "pipeline:run": "bun run --filter @nexus/worker pipeline"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.4.0",
+    "eslint": "^10.9.1",
+    "fast-check": "^4.9.0",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "tsx": "^4.23.13",
+    "typescript": "6.0.2",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  }
+}

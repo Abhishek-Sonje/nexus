@@ -1,0 +1,22 @@
+{
+  "name": "@nexus/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx src/cli/seed.ts",
+    "pipeline": "tsx src/cli/pipeline.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.19.0",
+    "@nexus/core": "workspace:*",
+    "@nexus/db": "workspace:*",
+    "@nexus/detection": "workspace:*",
+    "@nexus/synthetic": "workspace:*",
+    "pg-boss": "^12.29.0",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {}
+}
