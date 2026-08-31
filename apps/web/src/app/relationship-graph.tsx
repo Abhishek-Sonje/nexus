@@ -45,15 +45,25 @@ export default function RelationshipGraph({
         type: edge.directed ? 'arrow' : 'line',
       });
     });
-    const renderer = new Sigma(graph, container.current, {
-      allowInvalidContainer: false,
-      renderEdgeLabels: false,
-      labelColor: { color: '#93a09a' },
-      labelFont: 'JetBrains Mono Variable',
-      labelSize: 10,
-      stagePadding: 28,
+    const stage = container.current;
+    let renderer: Sigma | undefined;
+    const observer = new ResizeObserver(() => {
+      if (renderer || stage.clientWidth === 0 || stage.clientHeight === 0)
+        return;
+      renderer = new Sigma(graph, stage, {
+        allowInvalidContainer: false,
+        renderEdgeLabels: false,
+        labelColor: { color: '#93a09a' },
+        labelFont: 'JetBrains Mono Variable',
+        labelSize: 10,
+        stagePadding: 28,
+      });
     });
-    return () => renderer.kill();
+    observer.observe(stage);
+    return () => {
+      observer.disconnect();
+      renderer?.kill();
+    };
   }, [focus]);
   return (
     <figure className="relationship-map">

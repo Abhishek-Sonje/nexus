@@ -243,12 +243,12 @@ export function Observatory({
             aria-label="Ranked network findings"
           >
             <div className="finding-row finding-header" role="row">
-              <span>Rank</span>
-              <span>Community</span>
-              <span>Members</span>
-              <span>Leading evidence</span>
-              <span>Band</span>
-              <span>Score</span>
+              <span role="columnheader">Rank</span>
+              <span role="columnheader">Community</span>
+              <span role="columnheader">Members</span>
+              <span role="columnheader">Leading evidence</span>
+              <span role="columnheader">Band</span>
+              <span role="columnheader">Score</span>
             </div>
             {snapshot.findings.slice(0, 8).map((finding) => (
               <a
@@ -257,17 +257,21 @@ export function Observatory({
                 href={`/findings/${finding.id}`}
                 key={finding.id}
               >
-                <span className="rank">
+                <span className="rank" role="cell">
                   {String(finding.rank).padStart(2, '0')}
                 </span>
-                <span>C-{String(finding.ordinal).padStart(3, '0')}</span>
-                <span>{finding.memberCount}</span>
-                <span>{finding.explanation[0] ?? 'Network evidence'}</span>
-                <span>
+                <span role="cell">
+                  C-{String(finding.ordinal).padStart(3, '0')}
+                </span>
+                <span role="cell">{finding.memberCount}</span>
+                <span role="cell">
+                  {finding.explanation[0] ?? 'Network evidence'}
+                </span>
+                <span role="cell">
                   <i className={`band band-${finding.riskBand}`} />
                   {finding.riskBand}
                 </span>
-                <strong>{finding.score.toFixed(1)}</strong>
+                <strong role="cell">{finding.score.toFixed(1)}</strong>
               </a>
             ))}
           </div>
@@ -303,20 +307,24 @@ export function Observatory({
                 <BoundedGraph focus={snapshot.focus} />
                 <div
                   className="relationship-list"
+                  role="table"
                   aria-label="Relationship evidence table"
+                  tabIndex={0}
                 >
-                  <div className="relationship-head">
-                    <span>Source</span>
-                    <span>Signal</span>
-                    <span>Target</span>
-                    <span>Weight</span>
+                  <div className="relationship-head" role="row">
+                    <span role="columnheader">Source</span>
+                    <span role="columnheader">Signal</span>
+                    <span role="columnheader">Target</span>
+                    <span role="columnheader">Weight</span>
                   </div>
                   {snapshot.focus.evidence.slice(0, 12).map((edge) => (
-                    <div className="relationship-row" key={edge.id}>
-                      <code>{edge.sourceEntityId.slice(0, 8)}</code>
-                      <span>{edge.type.replaceAll('_', ' ')}</span>
-                      <code>{edge.targetEntityId.slice(0, 8)}</code>
-                      <strong>{edge.contribution.toFixed(2)}</strong>
+                    <div className="relationship-row" role="row" key={edge.id}>
+                      <code role="cell">{edge.sourceEntityId.slice(0, 8)}</code>
+                      <span role="cell">{edge.type.replaceAll('_', ' ')}</span>
+                      <code role="cell">{edge.targetEntityId.slice(0, 8)}</code>
+                      <strong role="cell">
+                        {edge.contribution.toFixed(2)}
+                      </strong>
                     </div>
                   ))}
                 </div>

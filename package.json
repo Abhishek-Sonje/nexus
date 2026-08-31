@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "db:generate": "bun run --filter @nexus/db db:generate",
     "db:migrate": "bun run --filter @nexus/db db:migrate",
@@ -22,6 +23,7 @@
     "pipeline:run": "bun run --filter @nexus/worker pipeline"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.1",
