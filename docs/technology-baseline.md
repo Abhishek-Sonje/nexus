@@ -4,7 +4,7 @@ Verified on 2026-09-01 against official release documentation and resolved throu
 
 | Area               | Selected baseline                                           |
 | ------------------ | ----------------------------------------------------------- |
-| Production runtime | Node.js 24 LTS container                                    |
+| Production runtime | Node.js 24.20.0 LTS bookworm-slim container                 |
 | Workspace tooling  | Bun 1.4 target; Bun 1.3.5 available on the development host |
 | Web                | Next.js 16.3.3, React 19.2.8                                |
 | Styling            | Tailwind CSS 4.3.3                                          |

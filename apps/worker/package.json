@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "bun --shell=system run dev:node",
     "dev:node": "node --env-file-if-exists=../../.env ../../node_modules/tsx/dist/cli.mjs watch src/index.ts",
-    "build": "bun build src/index.ts src/cli/pipeline.ts src/cli/seed.ts --outdir dist --target node",
+    "build": "bun build src/index.ts src/health.ts src/cli/pipeline.ts src/cli/seed.ts --outdir dist --target node",
     "typecheck": "bun ../../node_modules/typescript/bin/tsc --noEmit",
     "seed": "bun --shell=system run seed:node",
     "seed:node": "node --env-file-if-exists=../../.env ../../node_modules/tsx/dist/cli.mjs src/cli/seed.ts",
