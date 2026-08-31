@@ -1,6 +1,7 @@
 node_modules/
 .next/
 dist/
+*.tsbuildinfo
 coverage/
 playwright-report/
 test-results/
@@ -12,4 +13,3 @@ test-results/
 .impeccable/review/
 .impeccable/mocks/
 .impeccable/direction-options.json
-
