@@ -20,7 +20,7 @@ export function loadAccessPasswordHash(
   if (configuredPath) {
     const path = isAbsolute(configuredPath)
       ? configuredPath
-      : resolve(process.cwd(), configuredPath);
+      : resolve(/* turbopackIgnore: true */ process.cwd(), configuredPath);
     let value: string;
     try {
       value = readFileSync(path, 'utf8');

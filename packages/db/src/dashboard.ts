@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq } from 'drizzle-orm';
 
 import type { NexusDatabase } from './client';
 import {
@@ -56,6 +56,8 @@ export interface DashboardSnapshot {
     explanation: string[];
     narrative: string | null;
   }>;
+  totalFindingCount: number;
+  flaggedFindingCount: number;
   focus: {
     communityId: string;
     members: Array<{ id: string; displayName: string; category: string }>;
@@ -115,6 +117,24 @@ export async function getLatestDashboardSnapshot(
     .where(eq(communities.runId, latest.run.id))
     .orderBy(asc(communityScores.rank))
     .limit(20);
+  const [findingCounts] = await db
+    .select({
+      total: count(),
+      flagged: count(),
+    })
+    .from(communities)
+    .innerJoin(communityScores, eq(communities.id, communityScores.communityId))
+    .where(eq(communities.runId, latest.run.id));
+  const [flaggedCounts] = await db
+    .select({ flagged: count() })
+    .from(communities)
+    .innerJoin(communityScores, eq(communities.id, communityScores.communityId))
+    .where(
+      and(
+        eq(communities.runId, latest.run.id),
+        eq(communityScores.flagged, true),
+      ),
+    );
   const narrativeRows = await db
     .select()
     .from(narratives)
@@ -213,6 +233,8 @@ export async function getLatestDashboardSnapshot(
       explanation: score.explanation,
       narrative: narrativeByCommunity.get(community.id) ?? null,
     })),
+    totalFindingCount: Number(findingCounts?.total ?? 0),
+    flaggedFindingCount: Number(flaggedCounts?.flagged ?? 0),
     focus,
   };
 }

@@ -1,43 +1,57 @@
 # Nexus
 
-Nexus is a private, containerized investigation workspace for reproducible fraud-network detection on synthetic payment data. It builds deterministic evidence graphs, clusters them with seeded Louvain, scores communities with inspectable features, and reports final metrics only on an independently seeded held-out dataset.
+Explainable fraud-network detection for payment systems.
 
-Nexus is a defense-oriented evaluation system. It is not a live payment platform, a case-management product, or evidence of real-world fraud accuracy.
+Built for Razorpay AI Buildathon 2026 · Track 02 — AI Risk Manager.
 
-## Quick start
+Fraud rings are difficult to detect when transactions are examined in isolation. Nexus derives relationships from payment activity, builds an evidence graph, discovers suspicious communities, deterministically scores them, and exposes the evidence to investigators.
 
-Prerequisites: Node.js 24, Bun 1.4, Docker, and Docker Compose.
+Gemini is explanation-only. It cannot change risk scores, ranking, thresholds, findings, or evaluation metrics.
 
-1. Copy `.env.example` to `.env` and replace every blank secret.
-2. Generate an Argon2id hash for your chosen workspace password as described in [operations](docs/operations.md).
-3. Start the portable stack:
+## Reference benchmark
 
-   ```sh
-   docker compose up --build
-   ```
+On the independently seeded synthetic held-out dataset `nexus-heldout-hard-v5-2026-09-02`, the frozen detector recovered 35/35 planted rings (100% ring recall), 100% of planted entities, and achieved 87.5% community precision with 5 genuine hard-negative false positives. Modeled review cost was ₹1,250 with ₹0 missed exposure at threshold 45.
 
-4. Generate the deterministic datasets and run the tuning/held-out pipeline inside the worker image:
+These measurements apply only to reproducible synthetic held-out patterns and do not establish real-world fraud performance. See [the release report](docs/release-report.md).
 
-   ```sh
-   docker compose run --rm worker node dist/cli/seed.js
-   docker compose run --rm worker node dist/cli/pipeline.js
-   ```
+## How it works
 
-5. Open `http://localhost:3000` and enter the password whose hash you configured.
+```mermaid
+flowchart TD
+  A[Synthetic payment data] --> B[Evidence derivation<br/>shared device / payout / rapid flow]
+  B --> C[Evidence graph<br/>Graphology]
+  C --> D[Community discovery<br/>seeded Louvain]
+  D --> E[Deterministic risk scoring]
+  E --> F[Operating threshold]
+  F --> G[Investigation finding<br/>graph + evidence + score decomposition]
+  G --> H[Optional Gemini narrative<br/>explanation only]
+```
 
-For local development, migration, health checks, worker operation, telemetry, and recovery guidance, see [docs/operations.md](docs/operations.md).
+Evaluation path: tuning synthetic dataset → select detector profile → LOCK PROFILE → independently seeded held-out dataset → precision / recall / false-positive review cost.
 
-## Repository map
+## Architecture
 
-- `apps/web`: Next.js private gate, API, and investigator dashboard.
-- `apps/worker`: durable pg-boss jobs, analysis pipeline, and optional Gemini narratives.
-- `packages/core`: shared contracts, configuration, and money utilities.
-- `packages/db`: schema, migrations, and repositories.
-- `packages/synthetic`: deterministic dataset generation.
-- `packages/detection`: evidence, clustering, scoring, tuning, and evaluation.
-- `config/nexus.policy.json`: versioned generator, detector, economics, and queue policy.
+- `apps/web`: private Next.js gate, APIs, and investigator dashboard.
+- `apps/worker`: durable jobs and the tuning/held-out pipeline.
+- `packages/synthetic`: deterministic payment and hard-negative generation.
+- `packages/detection`: evidence, graph, Louvain, scoring, and evaluation.
+- `packages/db`: schema, migrations, and persistence.
+- `packages/core`: shared contracts, policy, and money utilities.
+- `config/nexus.policy.json`: versioned frozen policy.
 
-## Verification
+## Running locally
+
+Prerequisites: Node.js 24, Bun 1.4, Docker, and PostgreSQL. Copy `.env.example` to `.env`. For Bun development, keep the raw Argon2id hash in the gitignored `apps/web/.secrets/access-password.hash` and set `NEXUS_ACCESS_PASSWORD_HASH_FILE=.secrets/access-password.hash` in `apps/web/.env.development.local`.
+
+```sh
+bun install --frozen-lockfile
+bun run db:migrate
+bun run data:seed
+bun run pipeline:run
+bun run dev
+```
+
+Run `bun run dev:worker` in a second terminal. The release gate is:
 
 ```sh
 bun run format:check
@@ -48,4 +62,8 @@ bun run build
 bun run test:e2e
 ```
 
-The complete automated gate is defined in `.github/workflows/ci.yml`. Method definitions and limitations are documented in [methodology](docs/methodology.md) and [limitations](docs/limitations.md). The reproducible reference output is recorded in [the release report](docs/release-report.md).
+See [methodology](docs/methodology.md), [operations](docs/operations.md), and [limitations](docs/limitations.md) for reproducibility and non-goals.
+
+## Security and limitations
+
+The password gate, strict origin checks, secure session cookie, and rate limits protect this controlled demonstration. Production authentication remains environment-driven. Nexus is batch-oriented synthetic evaluation software, not a payment authorizer, case-management system, compliance certification, or claim of real-world fraud accuracy.

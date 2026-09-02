@@ -14,8 +14,6 @@ export type {
   DetectCommunitiesOptions,
 } from './communities';
 export { deriveEvidence } from './evidence';
-export { diagnoseFalsePositives, formatDiagnosisReport } from './diagnose-false-positives';
-export type { DiagnosisReport, FalsePositiveClassification } from './diagnose-false-positives';
 export { evaluateAtThreshold, evaluateThresholds } from './evaluation';
 export type {
   EvaluationPoint,

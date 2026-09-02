@@ -233,8 +233,9 @@ export function Observatory({
               <p>Deterministic score, evidence first</p>
             </div>
             <span>
-              {snapshot.findings.filter((finding) => finding.flagged).length}{' '}
-              above threshold
+              Showing top {snapshot.findings.length} of{' '}
+              {snapshot.totalFindingCount} findings ·{' '}
+              {snapshot.flaggedFindingCount} above threshold
             </span>
           </div>
           <div

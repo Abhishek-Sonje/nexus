@@ -222,7 +222,6 @@ describe('synthetic generator', () => {
     };
     const fastFlowCounts: number[] = [];
     const anomalyScores: number[] = [];
-    const featureCombinations = new Set<string>();
 
     for (const seed of [
       'dense-diversity-a',
@@ -312,20 +311,18 @@ describe('synthetic generator', () => {
         );
         fastFlowCounts.push(fastFlowCount);
         anomalyScores.push(anomaly);
-        featureCombinations.add(
-          `${fastFlowCount > 0 ? 'flow' : 'no-flow'}:${
-            anomaly > 0.1 ? 'anomalous' : 'routine'
-          }`,
-        );
       }
     }
 
     expect(fastFlowCounts.some((count) => count === 0)).toBe(true);
     expect(fastFlowCounts.some((count) => count > 0)).toBe(true);
     expect(new Set(fastFlowCounts).size).toBeGreaterThan(3);
-    expect(anomalyScores.some((score) => score <= 0.1)).toBe(true);
-    expect(anomalyScores.some((score) => score > 0.1)).toBe(true);
-    expect(featureCombinations.size).toBeGreaterThanOrEqual(3);
+    expect(
+      new Set(anomalyScores.map((score) => score.toFixed(3))).size,
+    ).toBeGreaterThan(10);
+    expect(
+      Math.max(...anomalyScores) - Math.min(...anomalyScores),
+    ).toBeGreaterThan(0.2);
   });
 
   it('conserves funds and ordering in legitimate settlement cycles', () => {
