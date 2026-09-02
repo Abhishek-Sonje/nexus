@@ -6,6 +6,7 @@ import {
 } from '@nexus/db';
 import { NextResponse } from 'next/server';
 
+import { loadAccessPasswordHash } from '../../../lib/access-password';
 import { loadPolicy } from '../../../lib/policy';
 import {
   hasValidOrigin,
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const password = form.get('password');
   const returnTo = form.get('returnTo');
-  const hash = process.env.NEXUS_ACCESS_PASSWORD_HASH;
+  const hash = loadAccessPasswordHash();
   const hashValue = remoteHash(request);
   const policy = await loadPolicy();
   const { db, pool } = createDatabase(databaseUrl);
@@ -77,10 +78,10 @@ export async function POST(request: Request) {
         429,
       );
     }
+
     const valid =
       typeof password === 'string' &&
-      Boolean(hash) &&
-      (await argon2.verify(hash!, password).catch(() => false));
+      (await argon2.verify(hash, password).catch(() => false));
     await recordAccessEvent(db, {
       eventType: valid ? 'session_succeeded' : 'session_failed',
       requestId,

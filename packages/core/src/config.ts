@@ -78,13 +78,28 @@ export const serverEnvironmentSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   DATABASE_URL: z.url(),
-  NEXUS_ACCESS_PASSWORD_HASH: z.string().min(20),
+  NEXUS_ACCESS_PASSWORD_HASH: z
+    .string()
+    .startsWith('$argon2id$', 'must be an Argon2id PHC string')
+    .optional(),
+  NEXUS_ACCESS_PASSWORD_HASH_FILE: z.string().min(1).optional(),
   NEXUS_SESSION_SECRET: z.string().min(32),
   NEXUS_ATTRIBUTE_HASH_KEY: z.string().min(32),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).default('gemini-3.7-flash'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
-});
+}).refine(
+  (environment) =>
+    Boolean(
+      environment.NEXUS_ACCESS_PASSWORD_HASH ||
+        environment.NEXUS_ACCESS_PASSWORD_HASH_FILE,
+    ),
+  {
+    message:
+      'Set NEXUS_ACCESS_PASSWORD_HASH or NEXUS_ACCESS_PASSWORD_HASH_FILE',
+    path: ['NEXUS_ACCESS_PASSWORD_HASH'],
+  },
+);
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;
 

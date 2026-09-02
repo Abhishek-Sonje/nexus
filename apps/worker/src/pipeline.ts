@@ -386,6 +386,117 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
       ...policy.detector,
       thresholdCandidates: [tuned.selected.threshold],
     });
+    // const flagged = scored.filter(
+    //   (community) =>
+    //     community.flagEligible && community.score >= tuned.selected.threshold,
+    // );
+
+    // const rings = heldOutDataset.truthGroups.filter(
+    //   (group) => group.kind === 'ring',
+    // );
+
+    // function jaccard(left: readonly string[], right: readonly string[]) {
+    //   const leftSet = new Set(left);
+    //   const rightSet = new Set(right);
+
+    //   const intersection = [...leftSet].filter((id) => rightSet.has(id)).length;
+
+    //   return intersection / new Set([...left, ...right]).size;
+    // }
+console.log('### DEBUG_FINAL_HELDOUT_SECTION ###');
+
+const flagged = scored.filter(
+  (community) =>
+    community.flagEligible && community.score >= tuned.selected.threshold,
+);
+
+const rings = heldOutDataset.truthGroups.filter(
+  (group) => group.kind === 'ring',
+);
+
+function jaccard(left: readonly string[], right: readonly string[]) {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+
+  const intersection = [...leftSet].filter((id) => rightSet.has(id)).length;
+
+  return intersection / new Set([...left, ...right]).size;
+}
+
+for (const ring of rings) {
+  // This determines whether evaluation considers the ring detected
+  const bestFlaggedMatch = flagged
+    .map((community) => ({
+      community,
+      overlap: jaccard(community.memberIds, ring.memberIds),
+    }))
+    .sort((a, b) => b.overlap - a.overlap)[0];
+
+  const wasMissed =
+    !bestFlaggedMatch ||
+    bestFlaggedMatch.overlap < policy.detector.matchJaccard;
+
+  if (!wasMissed) {
+    continue;
+  }
+
+  // Diagnostic: find the best community even if it was not flagged
+  const bestOverallMatch = scored
+    .map((community) => ({
+      community,
+      overlap: jaccard(community.memberIds, ring.memberIds),
+    }))
+    .sort((a, b) => b.overlap - a.overlap)[0];
+
+  console.log('### FINAL_MISSED_RING ###', {
+    ringId: ring.id,
+    exposurePaise: ring.estimatedExposurePaise,
+    ringMembers: ring.memberIds.length,
+
+    bestOverallCommunity: bestOverallMatch?.community.ordinal,
+    communitySize: bestOverallMatch?.community.memberIds.length,
+    overlap: bestOverallMatch?.overlap,
+
+    score: bestOverallMatch?.community.score,
+    features: bestOverallMatch?.community.features,
+    flagEligible: bestOverallMatch?.community.flagEligible,
+
+    threshold: tuned.selected.threshold,
+  });
+
+  for (const memberId of ring.memberIds) {
+    const community = scored.find((community) =>
+      community.memberIds.includes(memberId),
+    );
+
+    console.log('### RING_MEMBER_LOCATION ###', {
+      memberId,
+      community: community?.ordinal ?? null,
+      communitySize: community?.memberIds.length ?? 0,
+      score: community?.score ?? null,
+      flagEligible: community?.flagEligible ?? null,
+    });
+  }
+const ringMemberIds = new Set(ring.memberIds);
+
+console.log('### MISSED_RING_EVIDENCE ###');
+
+for (const edge of heldOutEvidence.edges) {
+  const touchesRing =
+    ringMemberIds.has(edge.sourceEntityId) ||
+    ringMemberIds.has(edge.targetEntityId);
+
+  if (touchesRing) {
+    console.log({
+      type: edge.type,
+      source: edge.sourceEntityId,
+      target: edge.targetEntityId,
+      weight: edge.contribution,
+    });
+  }
+}
+}
+    
     const detectionMs = elapsed(detectionAt);
 
     const persistedRun = await persistAnalysisResult(db, {

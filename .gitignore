@@ -7,6 +7,8 @@ playwright-report/
 test-results/
 .env
 .env.local
+.env.*.local
+.secrets/
 !.env.example
 *.log
 .DS_Store

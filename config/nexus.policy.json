@@ -1,16 +1,16 @@
 {
   "generator": {
-    "version": "2026-08-31.1",
-    "entityCount": 2000,
-    "transactionCount": 50000,
-    "ringCount": 20,
-    "legitimateDenseCount": 20,
+    "version": "2026-09-02-hard-3",
+    "entityCount": 5000,
+    "transactionCount": 100000,
+    "ringCount": 35,
+    "legitimateDenseCount": 35,
     "minRingSize": 5,
-    "maxRingSize": 11,
+    "maxRingSize": 15,
     "seeds": {
-      "tuning": "nexus-tuning-2026-08-31",
-      "heldOut": "nexus-heldout-2026-08-31",
-      "demo": "nexus-demo-2026-08-31"
+      "tuning": "nexus-tuning-hard-v5-2026-09-02",
+      "heldOut": "nexus-heldout-hard-v5-2026-09-02",
+      "demo": "nexus-demo-hard-v5-2026-09-02"
     }
   },
   "detector": {

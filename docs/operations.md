@@ -6,6 +6,8 @@ Copy `.env.example` to `.env`. Keep `.env` untracked. Required values are:
 
 - `DATABASE_URL`
 - `NEXUS_ACCESS_PASSWORD_HASH`: Argon2id hash, never the plaintext password
+- `NEXUS_ACCESS_PASSWORD_HASH_FILE`: optional path to a file containing the raw
+  Argon2id hash; when set, it takes precedence over `NEXUS_ACCESS_PASSWORD_HASH`
 - `NEXUS_SESSION_SECRET`: at least 32 random characters
 - `NEXUS_ATTRIBUTE_HASH_KEY`: at least 32 random characters
 
@@ -18,6 +20,20 @@ bun --cwd apps/web -e "import argon2 from 'argon2'; console.log(await argon2.has
 ```
 
 When placing an Argon2 hash in the Compose `.env`, escape every `$` as `$$` so Compose passes the literal hash. Use long, independently generated values for both HMAC secrets.
+
+For local Bun development, prefer the file setting because Bun performs dotenv
+variable expansion on `$` characters before Next.js starts. Put the raw hash in
+`apps/web/.secrets/access-password.hash` (the directory is gitignored), and set
+this in a gitignored local environment file such as
+`apps/web/.env.development.local`:
+
+```dotenv
+NEXUS_ACCESS_PASSWORD_HASH_FILE=.secrets/access-password.hash
+```
+
+The application validates the loaded value itself and requires it to begin with
+`$argon2id$`. Production can continue to provide `NEXUS_ACCESS_PASSWORD_HASH`
+directly through its environment or secrets manager.
 
 ## Local development
 

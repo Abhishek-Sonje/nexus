@@ -89,6 +89,13 @@ export function evaluateAtThreshold(
     60n;
   const reviewCostPaise = reviewCostPerFinding * BigInt(falsePositiveCount);
   const matchedIds = new Set(matchedRings.map((ring) => ring.id));
+  const missedRings = rings.filter((ring) => !matchedIds.has(ring.id));
+
+for (const ring of missedRings) {
+  console.log(
+    `### MISSED_RING ### id=${ring.id} exposure=${ring.estimatedExposurePaise} members=${ring.memberIds.join(',')}`,
+  );
+}
   const missedExposurePaise = rings
     .filter((ring) => !matchedIds.has(ring.id))
     .reduce((total, ring) => total + BigInt(ring.estimatedExposurePaise), 0n);
