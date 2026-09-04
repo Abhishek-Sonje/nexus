@@ -1,4 +1,5 @@
 # Nexus
+<img width="5760" height="3840" alt="screenshot-studio-1788514256325" src="https://github.com/user-attachments/assets/e07bb301-bfc0-4329-828b-a25cd7a43faf" />
 
 Explainable fraud-network detection for payment systems.
 
