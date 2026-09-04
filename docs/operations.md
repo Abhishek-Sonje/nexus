@@ -13,6 +13,8 @@ Copy `.env.example` to `.env`. Keep `.env` untracked. Required values are:
 
 `GEMINI_API_KEY` is optional. Without it, narratives use the deterministic fallback and detection remains fully operational.
 
+Narrative generation uses `GEMINI_MODEL`, `GEMINI_NARRATIVE_TIMEOUT_MS`, and `GEMINI_NARRATIVE_MAX_RETRIES`. The default is the available `gemini-flash-lite-latest` alias with a 60-second timeout and one retry. Use an explicitly versioned compatible model when strict narrative reproducibility is required.
+
 Generate a password hash locally without writing the password to source control:
 
 ```sh
@@ -54,6 +56,8 @@ bun run dev:worker
 ```
 
 The web application is at `http://localhost:3000`. Dataset generation remains CLI-only.
+
+On a flagged finding page, **Generate AI summary** enqueues a narrative job. Keep `bun run dev:worker` running while testing it. The page shows **Generating summary…**, polls for the cached result, and offers a retry state if processing fails. Refreshes do not generate additional narratives automatically.
 
 ## Portable deployment
 

@@ -22,7 +22,7 @@ Louvain uses the detector profile's resolution and injected seeded random-number
 
 Each community receives bounded features for fast-flow density, funnel or payout concentration, device-sharing density, graph density, and category-baseline anomaly. Category baselines are fitted from clean tuning members with robust median/MAD and time-of-day distributions. Raw measurements remain attached to the run for explanation.
 
-The score is a versioned weighted sum. A shared-device signal by itself cannot satisfy the flag rule. Gemini text is generated only after deterministic scoring and cannot alter a score, band, rank, threshold, or metric.
+The score is a versioned weighted sum. A shared-device signal by itself cannot satisfy the flag rule. Gemini text is available on demand only for flagged findings after deterministic scoring and cannot alter a score, band, rank, threshold, or metric. A request is processed through the durable PostgreSQL worker queue, and successful output is cached by finding, prompt version, and model.
 
 ## Tuning and economics
 

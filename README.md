@@ -24,7 +24,9 @@ flowchart TD
   D --> E[Deterministic risk scoring]
   E --> F[Operating threshold]
   F --> G[Investigation finding<br/>graph + evidence + score decomposition]
-  G --> H[Optional Gemini narrative<br/>explanation only]
+  G --> H[User requests optional narrative]
+  H --> I[Durable worker job]
+  I --> J[Gemini Flash Lite summary<br/>explanation only]
 ```
 
 Evaluation path: tuning synthetic dataset → select detector profile → LOCK PROFILE → independently seeded held-out dataset → precision / recall / false-positive review cost.
@@ -51,7 +53,11 @@ bun run pipeline:run
 bun run dev
 ```
 
-Run `bun run dev:worker` in a second terminal. The release gate is:
+Run `bun run dev:worker` in a second terminal.
+
+Gemini narratives are generated on demand for flagged findings. The finding page shows the deterministic explanation immediately; selecting **Generate AI summary** queues a durable worker job, displays a generating state, and caches a successful response. The worker must be running for this action.
+
+The release gate is:
 
 ```sh
 bun run format:check

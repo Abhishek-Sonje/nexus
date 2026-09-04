@@ -34,4 +34,4 @@ The project-owned CSS tokens in `apps/web/src/app/globals.css` define charcoal s
 
 ## Boundaries
 
-The interface makes synthetic provenance visible and avoids production-accuracy language. Gemini narrative is visually subordinate to deterministic evidence. There are no controls for payment action, case disposition, assignment, or other workflows outside the read-only MVP.
+The interface makes synthetic provenance visible and avoids production-accuracy language. Gemini narrative is visually subordinate to deterministic evidence. For flagged findings, an explicit Generate action protects quota and user intent; the interface preserves the deterministic explanation while announcing queued, generating, successful, and retry states. There are no controls for payment action, case disposition, assignment, or other workflows outside the read-only MVP.
