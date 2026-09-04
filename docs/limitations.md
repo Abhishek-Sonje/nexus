@@ -4,8 +4,8 @@ Nexus demonstrates a reproducible evaluation method on synthetic data. It must n
 
 ## Known limitations
 
-- Generator assumptions determine the available behaviors and ground truth. Perfect synthetic metrics can indicate an overly separable benchmark, not real-world readiness.
-- The reference scale is approximately 2,000 entities and 50,000 transactions. Larger-scale latency, memory, and partition quality are unproven.
+- Generator assumptions determine the available behaviors and ground truth. Planted rings are deliberately constructed to remain observable through Nexus's selected evidence vocabulary, including payout witnesses, transaction backbones, and timing that preserves rapid-flow evidence. The held-out benchmark therefore measures recovery and ranking of generator-aligned synthetic patterns, not broad real-world fraud-detection accuracy. Held-out truth does not enter scoring, community detection, ranking, or threshold selection.
+- The reference scale is 5,000 entities and 100,000 transactions. Larger-scale latency, memory, and partition quality are unproven.
 - Detection is batch-based. It does not provide streaming alerts or transaction authorization.
 - Small two- or three-member rings are an explicit blind spot for this release.
 - Category baselines and hard negatives are synthetic approximations, not learned merchant behavior.

@@ -1,14 +1,12 @@
 # Product
 
-<!-- impeccable:product-schema 1 -->
-
 ## Platform
 
 web
 
 ## Stack
 
-Delegated and confirmed: a Node.js 24 LTS production runtime with Bun 1.4 for workspace dependency management and developer scripts; Next.js 16 App Router, React 19, Tailwind CSS 4, PostgreSQL 18, Drizzle ORM, Graphology, Sigma.js, Zod, and optional Gemini enrichment. The application ships as portable containers.
+A Node.js 24 LTS production runtime with Bun 1.4 for workspace dependency management and developer scripts; Next.js 16 App Router, React 19, Tailwind CSS 4, PostgreSQL 18, Drizzle ORM, Graphology, Sigma.js, Zod, and optional Gemini enrichment. The application ships as portable containers.
 
 ## Users
 
@@ -24,7 +22,7 @@ Nexus combines deterministic community detection, explainable category-aware sco
 
 ## Operating Context
 
-The first release uses only reproducible synthetic INR data at approximately 2,000 entities. Investigators enter through a private environment-configured access gate, review run-level metrics first, then drill into ranked communities, score components, relationship evidence, and an optional generated narrative.
+The first release uses only reproducible synthetic INR data at 5,000 entities and 100,000 transactions. Investigators enter through a private environment-configured access gate, review run-level metrics first, then drill into ranked communities, score components, relationship evidence, and an optional generated narrative.
 
 ## Capabilities and Constraints
 
@@ -39,10 +37,6 @@ The first release uses only reproducible synthetic INR data at approximately 2,0
 ## Brand Commitments
 
 The product name is Nexus everywhere. The interface is dark-only, metrics-first, professional, defense-oriented, and must avoid theatrical cyber-security styling or unsupported claims.
-
-## Evidence on Hand
-
-`Nexus.md` contains the original detector concept, architecture rationale, proposed signals, held-out evaluation discipline, defense-only framing, and limitations. No real customer, payment, benchmark, or production-validation evidence exists and none may be fabricated.
 
 ## Product Principles
 

@@ -8,15 +8,9 @@ import {
   persistAnalysisResult,
   persistDetectorProfile,
   persistGeneratedDataset,
-  persistNarrative,
 } from '@nexus/db';
-import type { NexusDatabase } from '@nexus/db';
 import type { AnalysisJobPayload } from '@nexus/core';
-import {
-  detectorProfileSchema,
-  entityCategorySchema,
-  geminiEnvironmentSchema,
-} from '@nexus/core';
+import { detectorProfileSchema, entityCategorySchema } from '@nexus/core';
 import {
   communitiesFromPartition,
   deriveEvidence,
@@ -40,11 +34,8 @@ import pino from 'pino';
 import { z } from 'zod';
 
 import { loadPolicy } from './policy';
-import { generateNarrative } from './narratives';
-import { withSpan } from './telemetry';
 
 const logger = pino({ name: 'nexus-worker' });
-const geminiEnvironment = geminiEnvironmentSchema.parse(process.env);
 
 const robustMetricSchema = z.object({
   median: z.number(),
@@ -66,65 +57,6 @@ const lockedDetectorConfigurationSchema = detectorProfileSchema.extend({
     ),
   }),
 });
-
-async function persistFlaggedNarratives(
-  db: NexusDatabase,
-  communityIdsByOrdinal: Record<number, string>,
-  scored: readonly ScoredCommunity[],
-  evidence: ReturnType<typeof deriveEvidence>['edges'],
-): Promise<void> {
-  const flagged = scored.filter((community) => community.flagged).slice(0, 25);
-  await Promise.all(
-    flagged.map(async (community) => {
-      const communityId = communityIdsByOrdinal[community.ordinal];
-      if (!communityId) return;
-      const memberIds = new Set(community.memberIds);
-      const evidenceCounts = evidence
-        .filter(
-          (edge) =>
-            memberIds.has(edge.sourceEntityId) &&
-            memberIds.has(edge.targetEntityId),
-        )
-        .reduce<Record<string, number>>((counts, edge) => {
-          counts[edge.type] = (counts[edge.type] ?? 0) + 1;
-          return counts;
-        }, {});
-      const narrative = await withSpan(
-        'nexus.gemini.narrative',
-        {
-          'nexus.community.ordinal': community.ordinal,
-          'nexus.risk.band': community.riskBand,
-        },
-        () =>
-          generateNarrative(
-            {
-              communityOrdinal: community.ordinal,
-              memberIds: community.memberIds,
-              score: community.score,
-              riskBand: community.riskBand,
-              features: community.features,
-              evidenceCounts,
-            },
-            {
-              modelCode: geminiEnvironment.GEMINI_MODEL,
-              timeoutMs: geminiEnvironment.GEMINI_NARRATIVE_TIMEOUT_MS,
-              maxRetries: geminiEnvironment.GEMINI_NARRATIVE_MAX_RETRIES,
-              ...(geminiEnvironment.GEMINI_API_KEY
-                ? { apiKey: geminiEnvironment.GEMINI_API_KEY }
-                : {}),
-            },
-          ),
-      );
-      await persistNarrative(db, {
-        communityId,
-        ...narrative,
-        ...(narrative.structuredResponse
-          ? { structuredResponse: narrative.structuredResponse }
-          : {}),
-      });
-    }),
-  );
-}
 
 function detectionData(dataset: GeneratedDataset): {
   entities: DetectionEntity[];
@@ -278,12 +210,6 @@ export async function runPersistedAnalysis(
       scoredCommunities: scored,
       ...(evaluation ? { evaluation } : {}),
     });
-    await persistFlaggedNarratives(
-      db,
-      persisted.communityIdsByOrdinal,
-      scored,
-      evidence.edges,
-    );
     logger.info(
       {
         jobRequestId: payload.requestId,
@@ -393,23 +319,6 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
       ...policy.detector,
       thresholdCandidates: [tuned.selected.threshold],
     });
-    // const flagged = scored.filter(
-    //   (community) =>
-    //     community.flagEligible && community.score >= tuned.selected.threshold,
-    // );
-
-    // const rings = heldOutDataset.truthGroups.filter(
-    //   (group) => group.kind === 'ring',
-    // );
-
-    // function jaccard(left: readonly string[], right: readonly string[]) {
-    //   const leftSet = new Set(left);
-    //   const rightSet = new Set(right);
-
-    //   const intersection = [...leftSet].filter((id) => rightSet.has(id)).length;
-
-    //   return intersection / new Set([...left, ...right]).size;
-    // }
     const detectionMs = elapsed(detectionAt);
 
     const persistedRun = await persistAnalysisResult(db, {
@@ -425,12 +334,6 @@ export async function runCompletePipeline(): Promise<PipelineResult> {
       scoredCommunities: scored,
       evaluation,
     });
-    await persistFlaggedNarratives(
-      db,
-      persistedRun.communityIdsByOrdinal,
-      scored,
-      heldOutEvidence.edges,
-    );
     logger.info(
       {
         runId: persistedRun.runId,

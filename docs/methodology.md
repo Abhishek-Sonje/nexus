@@ -6,6 +6,8 @@ Nexus generates tuning and held-out datasets from different configured seeds and
 
 All displayed performance values are labelled **synthetic held-out evaluation**. They measure recovery of known injected patterns in this generator; they do not estimate performance on real payments.
 
+Planted rings are deliberately constructed to remain observable through the selected evidence vocabulary. This includes payout witnesses, transaction backbones, and timing structure that preserves rapid-flow evidence. The held-out benchmark therefore tests recovery and ranking of generator-aligned synthetic patterns rather than broad real-world fraud detection. Held-out truth is used only for evaluation; it does not enter scoring, community detection, ranking, or threshold selection.
+
 ## Evidence construction
 
 The detector receives entities, transactions, and normalized attribute links, but no interface capable of loading truth labels. It derives three evidence families:
