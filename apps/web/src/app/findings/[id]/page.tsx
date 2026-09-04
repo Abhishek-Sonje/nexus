@@ -2,6 +2,7 @@ import { createDatabase, getFinding } from '@nexus/db';
 import { notFound } from 'next/navigation';
 
 import { WorkspaceHeader } from '../../workspace-header';
+import { NarrativePanel } from './narrative-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,18 +80,12 @@ export default async function FindingPage({
           ))}
         </div>
       </section>
-      <section className="workspace-section">
-        <div className="section-heading">
-          <div>
-            <h2>Optional narrative</h2>
-            <p>{finding.narrative?.status ?? 'No narrative requested'}</p>
-          </div>
-        </div>
-        <div className="narrative-panel">
-          {narrative ??
-            'The deterministic explanation above remains the available review summary.'}
-        </div>
-      </section>
+      <NarrativePanel
+        findingId={finding.community.id}
+        initialNarrative={narrative ?? null}
+        initialStatus={finding.narrative?.status ?? null}
+        canGenerate={finding.score.flagged}
+      />
       <section className="workspace-section">
         <div className="section-heading">
           <div>
