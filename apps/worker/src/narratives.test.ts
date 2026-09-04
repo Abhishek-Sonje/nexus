@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { deterministicNarrative, generateNarrative } from './narratives';
+import {
+  deterministicNarrative,
+  generateNarrative,
+  providerErrorDetails,
+} from './narratives';
 
 const input = {
   communityOrdinal: 7,
@@ -56,5 +60,48 @@ describe('investigator narratives', () => {
 
     expect(result.status).toBe('fallback');
     expect(result.errorCategory).toBe('invalid_structure');
+  });
+
+  it('keeps provider diagnostics useful without exposing the API key', () => {
+    const apiKey = 'AIza123456789012345678901234567890';
+    const error = Object.assign(
+      new Error(`Request key=${apiKey} cannot access the configured model.`),
+      { status: 404, code: 'NOT_FOUND' },
+    );
+
+    expect(providerErrorDetails(error, apiKey)).toEqual({
+      errorName: 'Error',
+      errorMessage:
+        'Request key=[REDACTED_API_KEY] cannot access the configured model.',
+      providerStatus: 404,
+      providerCode: 'NOT_FOUND',
+    });
+  });
+
+  it('retries a transient provider failure before using fallback', async () => {
+    let attempts = 0;
+    const result = await generateNarrative(input, {
+      modelCode: 'gemini-test',
+      maxRetries: 1,
+      generator: {
+        generate: () => {
+          attempts += 1;
+          if (attempts === 1)
+            return Promise.reject(new Error('temporarily unavailable'));
+          return Promise.resolve({
+            text: JSON.stringify({
+              summary: 'The measured network warrants evidence review.',
+              strongestEvidence: ['Rapid pass-through is the leading signal.'],
+              counterEvidence: ['The dataset is synthetic.'],
+              uncertainty: 'Synthetic evidence is not proof of fraud.',
+              suggestedReviewFocus: ['Review the timestamped flow evidence.'],
+            }),
+          });
+        },
+      },
+    });
+
+    expect(attempts).toBe(2);
+    expect(result.status).toBe('generated');
   });
 });

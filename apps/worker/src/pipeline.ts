@@ -12,7 +12,11 @@ import {
 } from '@nexus/db';
 import type { NexusDatabase } from '@nexus/db';
 import type { AnalysisJobPayload } from '@nexus/core';
-import { detectorProfileSchema, entityCategorySchema } from '@nexus/core';
+import {
+  detectorProfileSchema,
+  entityCategorySchema,
+  geminiEnvironmentSchema,
+} from '@nexus/core';
 import {
   communitiesFromPartition,
   deriveEvidence,
@@ -40,6 +44,7 @@ import { generateNarrative } from './narratives';
 import { withSpan } from './telemetry';
 
 const logger = pino({ name: 'nexus-worker' });
+const geminiEnvironment = geminiEnvironmentSchema.parse(process.env);
 
 const robustMetricSchema = z.object({
   median: z.number(),
@@ -101,9 +106,11 @@ async function persistFlaggedNarratives(
               evidenceCounts,
             },
             {
-              modelCode: process.env.GEMINI_MODEL ?? 'gemini-3.7-flash',
-              ...(process.env.GEMINI_API_KEY
-                ? { apiKey: process.env.GEMINI_API_KEY }
+              modelCode: geminiEnvironment.GEMINI_MODEL,
+              timeoutMs: geminiEnvironment.GEMINI_NARRATIVE_TIMEOUT_MS,
+              maxRetries: geminiEnvironment.GEMINI_NARRATIVE_MAX_RETRIES,
+              ...(geminiEnvironment.GEMINI_API_KEY
+                ? { apiKey: geminiEnvironment.GEMINI_API_KEY }
                 : {}),
             },
           ),

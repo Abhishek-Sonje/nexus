@@ -73,6 +73,23 @@ export type NexusPolicy = z.infer<typeof nexusPolicySchema>;
 export type DetectorProfile = z.infer<typeof detectorProfileSchema>;
 export type GeneratorProfile = z.infer<typeof generatorProfileSchema>;
 
+export const geminiEnvironmentSchema = z.object({
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GEMINI_MODEL: z.string().min(1).default('gemini-flash-lite-latest'),
+  GEMINI_NARRATIVE_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(120_000)
+    .default(60_000),
+  GEMINI_NARRATIVE_MAX_RETRIES: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(3)
+    .default(1),
+});
+
 export const serverEnvironmentSchema = z
   .object({
     NODE_ENV: z
@@ -87,7 +104,11 @@ export const serverEnvironmentSchema = z
     NEXUS_SESSION_SECRET: z.string().min(32),
     NEXUS_ATTRIBUTE_HASH_KEY: z.string().min(32),
     GEMINI_API_KEY: z.string().min(1).optional(),
-    GEMINI_MODEL: z.string().min(1).default('gemini-3.7-flash'),
+    GEMINI_MODEL: z.string().min(1).default('gemini-flash-lite-latest'),
+    GEMINI_NARRATIVE_TIMEOUT_MS:
+      geminiEnvironmentSchema.shape.GEMINI_NARRATIVE_TIMEOUT_MS,
+    GEMINI_NARRATIVE_MAX_RETRIES:
+      geminiEnvironmentSchema.shape.GEMINI_NARRATIVE_MAX_RETRIES,
     OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   })
   .refine(
