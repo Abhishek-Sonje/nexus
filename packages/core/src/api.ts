@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const ANALYSIS_QUEUE = 'nexus-analysis';
+export const NARRATIVE_QUEUE = 'nexus-narrative';
 
 export const apiErrorSchema = z.object({
   error: z.object({
@@ -22,6 +23,13 @@ export const analysisJobPayloadSchema = createRunRequestSchema.extend({
 });
 
 export type AnalysisJobPayload = z.infer<typeof analysisJobPayloadSchema>;
+
+export const narrativeJobPayloadSchema = z.object({
+  findingId: z.uuid(),
+  requestId: z.uuid(),
+});
+
+export type NarrativeJobPayload = z.infer<typeof narrativeJobPayloadSchema>;
 
 export const sessionRequestSchema = z.object({
   password: z.string().min(1).max(256),

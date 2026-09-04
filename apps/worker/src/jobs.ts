@@ -1,11 +1,17 @@
 import { PgBoss } from 'pg-boss';
 import type { JobWithMetadata } from 'pg-boss';
 import pino from 'pino';
-import { ANALYSIS_QUEUE, analysisJobPayloadSchema } from '@nexus/core';
+import {
+  ANALYSIS_QUEUE,
+  analysisJobPayloadSchema,
+  NARRATIVE_QUEUE,
+  narrativeJobPayloadSchema,
+} from '@nexus/core';
 import type { AnalysisJobPayload } from '@nexus/core';
 import { createDatabase, markAnalysisRunFailed } from '@nexus/db';
 
 import { runPersistedAnalysis } from './pipeline';
+import { generateFindingNarrative } from './finding-narrative';
 import { loadPolicy } from './policy';
 import { recordQueueLatency, recordRunOutcome, withSpan } from './telemetry';
 
@@ -17,6 +23,11 @@ export async function startJobWorker(databaseUrl: string): Promise<PgBoss> {
   boss.on('error', (error) => logger.error({ error }, 'pg-boss error'));
   await boss.start();
   await boss.createQueue(ANALYSIS_QUEUE, {
+    retryLimit: policy.queue.retryLimit,
+    retryDelay: policy.queue.retryDelaySeconds,
+    expireInSeconds: policy.queue.expireInSeconds,
+  });
+  await boss.createQueue(NARRATIVE_QUEUE, {
     retryLimit: policy.queue.retryLimit,
     retryDelay: policy.queue.retryDelaySeconds,
     expireInSeconds: policy.queue.expireInSeconds,
@@ -68,6 +79,38 @@ export async function startJobWorker(databaseUrl: string): Promise<PgBoss> {
             await pool.end();
           }
         }
+        throw error;
+      }
+    },
+  );
+  await boss.work(
+    NARRATIVE_QUEUE,
+    { batchSize: 1, includeMetadata: true } as const,
+    async (jobs: JobWithMetadata<unknown>[]) => {
+      const job = jobs[0];
+      if (!job) throw new Error('pg-boss delivered an empty narrative batch.');
+      const payload = narrativeJobPayloadSchema.parse(job.data);
+      try {
+        return await withSpan(
+          'nexus.narrative.job',
+          {
+            'nexus.job.id': job.id,
+            'nexus.finding.id': payload.findingId,
+          },
+          () => generateFindingNarrative(databaseUrl, payload.findingId),
+        );
+      } catch (error) {
+        logger.error(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Unknown narrative failure.',
+            jobId: job.id,
+            findingId: payload.findingId,
+          },
+          'narrative job failed',
+        );
         throw error;
       }
     },

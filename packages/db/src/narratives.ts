@@ -1,4 +1,5 @@
 import type { NexusDatabase } from './client';
+import { and, desc, eq } from 'drizzle-orm';
 import { narratives } from './schema';
 
 export interface PersistNarrativeInput {
@@ -28,4 +29,24 @@ export async function persistNarrative(
         narratives.modelCode,
       ],
     });
+}
+
+export async function getGeneratedNarrative(
+  db: NexusDatabase,
+  communityId: string,
+  modelCode: string,
+) {
+  const [narrative] = await db
+    .select()
+    .from(narratives)
+    .where(
+      and(
+        eq(narratives.communityId, communityId),
+        eq(narratives.modelCode, modelCode),
+        eq(narratives.status, 'generated'),
+      ),
+    )
+    .orderBy(desc(narratives.createdAt))
+    .limit(1);
+  return narrative ?? null;
 }
