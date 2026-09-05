@@ -15,6 +15,7 @@ import {
   narratives,
 } from './schema';
 
+// This file defines the structure of the dashboard snapshot and provides a function to retrieve the latest snapshot from the database. The snapshot includes information about the latest analysis run, dataset, detector, evaluation results, findings, and focus on a specific community with its members and evidence.
 export interface DashboardSnapshot {
   run: {
     id: string;
